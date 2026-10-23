@@ -1403,7 +1403,7 @@ g.desenhar_texto(210, 835, "[ Clique fora desta caixa para fechar ]")
 
 		g.definir_cor(g.COR_AMARELO)
 		g.definir_tamanho_texto(36.0)
-		cadeia titulo = "MELHORIAS (UPGRADES)"
+		cadeia titulo = "HABILIDADES (UPGRADES)"
 		inteiro x_titulo = tela_w / 2 - g.largura_texto(titulo) / 2
 		g.desenhar_texto(x_titulo, 50, titulo)
 
@@ -1420,6 +1420,19 @@ g.desenhar_texto(210, 835, "[ Clique fora desta caixa para fechar ]")
 		g.desenhar_texto(x_coluna2, 130, "P2 (Setas para mover | DIR para Comprar)")
 		g.definir_cor(g.COR_AMARELO)
 		g.desenhar_texto(x_coluna2, 160, "Banco: " + strikecoins_p2 + " Strikecoins")
+
+		g.definir_cor(0xCCCCCC)
+		g.desenhar_texto(x_coluna1, 590, "*Rebatida Aleatória: Rebatidas param de seguir um Padrão")
+		
+		g.definir_cor(0xCCCCCC)
+		g.desenhar_texto(x_coluna1, 620, "*Aumento de Velocidade: Aumenta a Velocidade do seu Personagem")
+		
+		g.definir_cor(0xCCCCCC)
+		g.desenhar_texto(x_coluna1, 650, "*Confusão: Inverte o Controle do seu Oponente")
+		g.definir_cor(0xCCCCCC)
+		
+		g.desenhar_texto(x_coluna1, 680, "*Congelamento: Diminui a Velocidade do seu Oponente")
+		
 
 		inteiro y_base = 230
 		inteiro espacamento_y = 75
@@ -2871,7 +2884,7 @@ g.desenhar_texto(210, 835, "[ Clique fora desta caixa para fechar ]")
  * Esta seção do arquivo guarda informações do Portugol Studio.
  * Você pode apagá-la se estiver utilizando outro editor.
  * 
- * @POSICAO-CURSOR = 86099; 
+ * @POSICAO-CURSOR = 43059; 
  * @PONTOS-DE-PARADA = ;
  * @SIMBOLOS-INSPECIONADOS = ;
  * @FILTRO-ARVORE-TIPOS-DE-DADO = inteiro, real, logico, cadeia, caracter, vazio;
