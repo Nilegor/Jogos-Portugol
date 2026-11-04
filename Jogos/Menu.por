@@ -28,18 +28,24 @@ programa {
 	inteiro tamanho_tile=32
 	inteiro campo[5]
 	real tamanho_fonte
-	inteiro pontuacao_y, pontuacao1_x, pontuacao2_x, pontuacao_img = -1, imagem_pausa=0, portugol=-1
+	inteiro pontuacao_y, pontuacao1_x, pontuacao2_x, pontuacao_img = -1, imagem_pausa=-1, portugol=-1
 	inteiro tempo_anterior_demo
 	logico DEMO_mode = falso
 	inteiro player1[6], player2[6], bolinha[8], passo=1, max_vel=7
 	inteiro velocidade_player = 8 
-	inteiro colision_music, colision_play
+	inteiro colision_music = -1, colision_play
+	logico fonte_pong_carregada = falso
 	logico pausado = falso
 	inteiro forca1 = 0
 	inteiro forca2 = 0
 	logico carregando1 = falso
 	logico carregando2 = falso
 	const inteiro FORCA_MAX = 10
+	// Rebatida Aleatória só pode ser comprada até este nível (1 = compra única)
+	const inteiro NIVEL_MAX_REBATIDA = 1
+	// Altura dos rebatedores em "tiles" (a largura sai proporcional ao sprite).
+	// A hitbox usa exatamente esse tamanho. Aumente/diminua este valor para mudar o personagem.
+	const inteiro ALTURA_JOGADOR_TILES = 6
 	inteiro img_batedor1 = -1
 	inteiro img_batedor2 = -1
 	inteiro bola_beisebol = -1
@@ -164,19 +170,17 @@ programa {
 
 		// Inicializa a janela gráfica principal
 		g.iniciar_modo_grafico(verdadeiro)
-		g.definir_dimensoes_janela(785, 1024)
+		g.definir_dimensoes_janela(785, 900)
 		g.definir_titulo_janela("Menu de Opções")
 
 		// Carrega as imagens do menu e dos botões
 		imagem_fundo = g.carregar_imagem("Menu/Fundo.png")
 		img_corrida = g.carregar_imagem("Menu/Corrida.png")
 		img_pong = g.carregar_imagem("Menu/Pong.png")
-		img_serpente = g.carregar_imagem("Menu/Serpente.png")
 		img_sair = g.carregar_imagem("Menu/Sair.png")
 
 		g.redimensionar_imagem(img_corrida, 535, 120, falso)
 		g.redimensionar_imagem(img_pong, 535, 120, falso)
-		g.redimensionar_imagem(img_serpente, 535, 120, falso)
 		g.redimensionar_imagem(img_sair, 535, 120, falso)
 
 		logico executando = verdadeiro
@@ -188,31 +192,30 @@ programa {
 			// Desenho dos botões do menu
 			g.desenhar_imagem(89, 130, img_corrida)
 			g.desenhar_imagem(89, 310, img_pong)
-			g.desenhar_imagem(14, 435, img_serpente)
-			g.desenhar_imagem(89, 670, img_sair)
+			g.desenhar_imagem(89, 490, img_sair)
 
 			// --- BOTÃO DE INFORMAÇÕES (Canto Inferior Direito) ---
 			g.definir_opacidade(80)
 			g.definir_cor(g.COR_PRETO)
-			g.desenhar_retangulo(643, 933, 110, 50, verdadeiro, verdadeiro)
+			g.desenhar_retangulo(643, 766, 110, 50, verdadeiro, verdadeiro)
 
 			g.definir_opacidade(200)
 			g.definir_cor(g.COR_PRETO)
-			g.desenhar_retangulo(640, 930, 110, 50, verdadeiro, verdadeiro)
+			g.desenhar_retangulo(640, 764, 110, 50, verdadeiro, verdadeiro)
 
 			g.definir_opacidade(255)
 			g.definir_cor(g.COR_AMARELO)
-			g.desenhar_retangulo(640, 930, 110, 50, verdadeiro, falso)
+			g.desenhar_retangulo(640, 764, 110, 50, verdadeiro, falso)
 
 			g.definir_cor(g.COR_AMARELO)
-			g.desenhar_elipse(655, 942, 26, 26, verdadeiro)
+			g.desenhar_elipse(655, 776, 26, 26, verdadeiro)
 			g.definir_cor(g.COR_PRETO)
 			g.definir_tamanho_texto(18.0)
-			g.desenhar_texto(666, 946, "i")
+			g.desenhar_texto(666, 780, "i")
 
 			g.definir_cor(g.COR_BRANCO)
 			g.definir_tamanho_texto(16.0)
-			g.desenhar_texto(690, 946, "INFO")
+			g.desenhar_texto(690, 780, "INFO")
 
 			se (m.botao_pressionado(m.BOTAO_ESQUERDO))
 			{
@@ -229,24 +232,18 @@ programa {
 					se (mouse_x >= 89 e mouse_x <= 624 e mouse_y >= 240 e mouse_y <= 440)
 					{
 						executar_jogo_corrida()
-						g.definir_dimensoes_janela(785, 1024)
+						g.definir_dimensoes_janela(785, 900)
 						g.definir_titulo_janela("Menu de Opções")
 					}
 					senao se (mouse_x >= 89 e mouse_x <= 624 e mouse_y >= 460 e mouse_y <= 620)
 					{
 						executar_jogo_pong()
 					}
-					senao se (mouse_x >= 14 e mouse_x <= 549 e mouse_y >= 640 e mouse_y <= 700)
-					{
-						executar_jogo_serpente()
-						g.definir_dimensoes_janela(785, 1024)
-						g.definir_titulo_janela("Menu de Opções")
-					}
-					senao se (mouse_x >= 89 e mouse_x <= 624 e mouse_y >= 840 e mouse_y <= 1000)
+					senao se (mouse_x >= 89 e mouse_x <= 624 e mouse_y >= 630 e mouse_y <= 800)
 					{
 						executando = falso
 					}
-					senao se (mouse_x >= 640 e mouse_x <= 750 e mouse_y >= 930 e mouse_y <= 980)
+					senao se (mouse_x >= 640 e mouse_x <= 750 e mouse_y >= 760 e mouse_y <= 820)
 					{
 						mostrar_info = verdadeiro
 						u.aguarde(200)
@@ -258,71 +255,67 @@ programa {
 			{
 				g.definir_opacidade(240)
 g.definir_cor(g.COR_PRETO)
-g.desenhar_retangulo(40, 100, 705, 820, verdadeiro, verdadeiro)
+g.desenhar_retangulo(30, 25, 725, 850, verdadeiro, verdadeiro)
 
 g.definir_opacidade(255)
 g.definir_cor(g.COR_AMARELO)
-g.desenhar_retangulo(40, 100, 705, 820, verdadeiro, falso)
+g.desenhar_retangulo(30, 25, 725, 850, verdadeiro, falso)
 
-g.definir_tamanho_texto(22.0)
+g.definir_tamanho_texto(28.0)
 g.definir_cor(g.COR_AMARELO)
-g.desenhar_texto(270, 120, "CENTRAL DE JOGOS - v1.0")
-
-g.definir_tamanho_texto(13.0)
-g.definir_cor(g.COR_BRANCO)
-g.desenhar_texto(80, 200, "Desenvolvido por: Jackson C. Giordani e Lucas E. V. Bôas")
-g.desenhar_texto(80, 220, "Curso Técnico em Desenvolvimento de Sistemas (Matutino) - 2025")
+g.desenhar_texto(210, 50, "CENTRAL DE JOGOS — v1.0")
 
 g.definir_tamanho_texto(15.0)
-
-g.definir_cor(g.COR_AMARELO)
-g.desenhar_texto(80, 260, "CORRIDA:")
 g.definir_cor(g.COR_BRANCO)
-g.definir_tamanho_texto(13.0)
-g.desenhar_texto(80, 285, "Corrida para dois jogadores (P1: WASD, P2: Setas). Cada um ocupa uma")
-g.desenhar_texto(80, 305, "faixa da pista, devendo desviar de veículos, coletar estrelas (para")
-g.desenhar_texto(80, 325, "comprar skins e melhorias) e galões de combustível para não parar.")
-g.desenhar_texto(80, 345, "Gerencie velocidade e combustível; quanto mais longe, maior a pontuação.")
+g.desenhar_texto(70, 95, "Desenvolvido por: Jackson C. Giordani e Lucas E. V. Bôas")
+g.desenhar_texto(70, 115, "Curso Técnico em Desenvolvimento de Sistemas — 2025")
+
+g.definir_tamanho_texto(19.0)
+g.definir_cor(g.COR_AMARELO)
+g.desenhar_texto(70, 155, "CORRIDA:")
+g.definir_cor(g.COR_BRANCO)
+g.definir_tamanho_texto(15.0)
+g.desenhar_texto(70, 185, "Jogo para dois jogadores em que o objetivo é percorrer a pista")
+g.desenhar_texto(70, 207, "e alcançar a maior distância possível. P1 utiliza WASD e P2,")
+g.desenhar_texto(70, 229, "as setas do teclado. Desvie dos veículos, colete estrelas para")
+g.desenhar_texto(70, 251, "comprar skins e melhorias e pegue galões para abastecer.")
+g.desenhar_texto(70, 273, "Gerencie a velocidade e o combustível para continuar na disputa.")
+
+g.definir_tamanho_texto(19.0)
+g.definir_cor(g.COR_AMARELO)
+g.desenhar_texto(70, 315, "PONG:")
+g.definir_cor(g.COR_BRANCO)
+g.definir_tamanho_texto(15.0)
+g.desenhar_texto(70, 345, "Uma versão de Beisebol Pong para dois jogadores, com habilidades")
+g.desenhar_texto(70, 367, "e melhorias que tornam cada partida mais estratégica. P1 utiliza")
+g.desenhar_texto(70, 389, "W/S para se movimentar e Espaço para controlar a força da rebatida.")
+g.desenhar_texto(70, 411, "P2 utiliza as setas e Enter. Compre melhorias com Strikecoins,")
+g.desenhar_texto(70, 433, "ative habilidades durante a partida e tente superar seu adversário.")
+
+g.definir_tamanho_texto(19.0)
+g.definir_cor(g.COR_AMARELO)
+g.desenhar_texto(70, 475, "SISTEMA DE PROGRESSÃO:")
+g.definir_cor(g.COR_BRANCO)
+g.definir_tamanho_texto(15.0)
+g.desenhar_texto(70, 505, "Na Corrida, utilize as estrelas coletadas para desbloquear skins")
+g.desenhar_texto(70, 527, "e melhorias. No Pong, acumule Strikecoins durante as rebatidas")
+g.desenhar_texto(70, 549, "para adquirir vantagens e habilidades especiais.")
+g.desenhar_texto(70, 571, "Cada melhoria pode alterar sua estratégia e o resultado da partida.")
+
+g.definir_tamanho_texto(19.0)
+g.definir_cor(g.COR_AMARELO)
+g.desenhar_texto(70, 613, "SAIR:")
+g.definir_cor(g.COR_BRANCO)
+g.definir_tamanho_texto(15.0)
+g.desenhar_texto(70, 643, "Encerra o Menu de Jogos e fecha o programa.")
 
 g.definir_tamanho_texto(15.0)
-g.definir_cor(g.COR_AMARELO)
-g.desenhar_texto(80, 385, "PONG:")
-g.definir_cor(g.COR_BRANCO)
-g.definir_tamanho_texto(13.0)
-g.desenhar_texto(80, 410, "Beisebol Pong: versão tática do clássico. P1: W/S e Espaço (força);")
-g.desenhar_texto(80, 430, "P2: Setas e Enter. A força da rebatida depende do tempo pressionado.")
-g.desenhar_texto(80, 450, "Compre melhorias (rebatida aleatória, velocidade, confusão, congelamento)")
-g.desenhar_texto(80, 470, "e ative-as durante o jogo para virar a partida.")
-
-g.definir_tamanho_texto(15.0)
-g.definir_cor(g.COR_AMARELO)
-g.desenhar_texto(80, 510, "SERPENTE:")
-g.definir_cor(g.COR_BRANCO)
-g.definir_tamanho_texto(13.0)
-g.desenhar_texto(80, 535, "Clássico jogo da cobra com elementos elementares. Colete comidas para")
-g.desenhar_texto(80, 555, "crescer e acumular pontos. A cada 3 comidas, surge uma fruta especial")
-g.desenhar_texto(80, 575, "(Fogo, Gelo, Pedra, Raio ou Vento) com efeitos temporários. Oferece")
-g.desenhar_texto(80, 595, "6 níveis de dificuldade, cenário circular e placar de recordes.")
-g.desenhar_texto(80, 615, "Use as setas para controlar a direção da serpente.")
-
-g.definir_tamanho_texto(15.0)
-g.definir_cor(g.COR_AMARELO)
-g.desenhar_texto(80, 655, "SAIR:")
-g.definir_cor(g.COR_BRANCO)
-g.definir_tamanho_texto(13.0)
-g.desenhar_texto(80, 680, "Fecha todos os jogos e encerra o programa.")
-
-g.definir_tamanho_texto(13.0)
-g.desenhar_texto(80, 720, "Este menu centraliza todos os jogos desenvolvidos. Basta clicar no")
-g.desenhar_texto(80, 740, "botão desejado para iniciar. Cada jogo possui regras e mecânicas próprias.")
-
-g.definir_tamanho_texto(14.0)
 g.definir_cor(g.COR_VERDE)
-g.desenhar_texto(80, 780, "DICA: Pressione [ESC] para sair de qualquer jogo.")
+g.desenhar_texto(70, 685, "DICA: Pressione ESC para sair de qualquer jogo.")
 
 g.definir_tamanho_texto(14.0)
 g.definir_cor(g.COR_AZUL)
-g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
+g.desenhar_texto(210, 835, "[ Clique fora desta caixa para fechar ]")
 			}
 
 			g.renderizar()
@@ -331,1902 +324,13 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		g.liberar_imagem(imagem_fundo)
 		g.liberar_imagem(img_corrida)
 		g.liberar_imagem(img_pong)
-		g.liberar_imagem(img_serpente)
+		
 		g.liberar_imagem(img_sair)
 		
 		g.encerrar_modo_grafico()
 	}
 		
 
-		
-	funcao executar_jogo_serpente()
-	{
-		g.definir_cor(g.COR_PRETO)
-		g.limpar()
-		
-		g.definir_cor(g.COR_VERDE)
-		g.desenhar_texto(300, 280, "Iniciando Jogo da Serpente...")
-		g.renderizar()
-		
-		u.aguarde(2000)
-		iniciar_serpente()
-	}
-
-	/* Constantes que definem os atributos de um segmento da serpente */	
-	const inteiro LINHA = 0, COLUNA = 1, DIRECAO = 2
-
-	/* Constantes que definem as direções possíveis para o segmento da serpente */
-	const inteiro ACIMA = 0, ABAIXO = 1, ESQUERDA = 2, DIREITA = 3
-
-	/* Constantes que definem as telas do jogo */
-	const inteiro SAIR = 0, MENU = 1, JOGO = 2, VITORIA = 3, DERROTA = 4, PLACAR = 5, IDENTIFICACAO = 6
-
-	/* Constantes que definem as opções do menu */
-	const inteiro OPCAO_NOVO_JOGO = 0, OPCAO_DIFICULDADE = 1, OPCAO_CENARIO = 2, OPCAO_SONS = 3, OPCAO_TEMA = 4
-
-	/* Constantes que definem o intervalo de atualização para cada nível de dificuldade */
-	const inteiro MUITO_FACIL = 0, FACIL = 1, MEDIO = 2, DIFICIL = 3, MUITO_DIFICIL = 4, CHUCK_NORRIS = 5
-	
-	/* Intervalos de tempo em que o jogo deve ser atualizado */
-	const inteiro INTERVALO_ATUALIZACAO[] = {500, 125, 60, 30, 15, 15}
-
-	/* Valor da comida, de acordo com o nível de dificuldade */
-	const inteiro VALOR_COMIDA[] = {1, 5, 25, 50, 75, 125}
-
-	/* Constantes que definem as propriedades do tema do jogo */
-	const inteiro NOME_TEMA = 0, PASTA_IMAGENS = 1, COR_FUNDO = 2, COR_TEXTO = 3, COR_BORDA = 4
-	
-	/* Temas disponíveis para o jogo */
-	cadeia TEMAS[][] = 
-	{
-		{"Moderno", "moderno", "0xB5D3E0", "0x000000", "0x000000"},
-		{"Nokia",   "nokia",   "0xB5D3E0", "0x000000", "0x000000"}
-	}
-
-	/* Constantes que definem os campos do placar */
-	const inteiro NOME_JOGADOR = 0, TEMPO = 1, DIFICULDADE = 2, PONTUACAO = 3
-	
-	/* Matriz que armazena as entradas do placar */
-	cadeia placar_jogo[10][4]
-
-	/* Constantes que definem as dimensões do cenário */
-	const inteiro LINHAS = 30, COLUNAS = 35, BORDA_CENARIO = 10, ALTURA_PAINEL_PONTUACAO = 30
-
-	/* Constantes que definem o tamanho da serpente no jogo */
-	const inteiro TAMANHO_MAXIMO_SERPENTE = 500, TAMANHO_INICIAL_SERPENTE = 4
-
-	inteiro serpente[TAMANHO_MAXIMO_SERPENTE][3]
-
-	/* Variáveis que definem o índice da cabeça e da cauda da serpente */
-	inteiro CABECA = 0, CAUDA = 0 
-
-	/* Variáveis que armazenam as opções do jogo */
-	logico cenario_circular = falso, reproduzir_sons = verdadeiro, continuar = falso
-	
-	inteiro dificuldade = MEDIO, tema_atual = 0, opcao_menu_serpente = OPCAO_NOVO_JOGO
-
-	/* Variáveis de controle do jogo */
-	cadeia nome_jogador = ""
-	
-	inteiro pontuacao_jogador = 0, tamanho_serpente = 0, entrada_placar = -1
-	inteiro altura_tela = 0, largura_tela = 0, tamanho_segmento = 0
-	logico primeira_execucao = verdadeiro, pode_continuar = falso, exibir_intermitencia = falso
-	
-	inteiro comida[2], ultimo_estado_cauda[3], tema[5]
-
-	/* --- MECÂNICAS ELEMENTARES --- */
-	const inteiro FRUTA_FOGO = 0, FRUTA_GELO = 1, FRUTA_PEDRA = 2, FRUTA_RAIO = 3, FRUTA_VENTO = 4
-
-	logico fruta_especial_ativa = falso
-	inteiro fruta_especial[2]
-	inteiro tipo_fruta_especial = 0
-	inteiro contador_comidas_normais = 0
-	inteiro tempo_spawn_fruta = 0
-
-	/* Controle dos Efeitos Ativos */
-	inteiro efeito_ativo = -1 
-	inteiro duracao_efeito = 0
-
-	/* Variáveis de fluxo das telas */
-	inteiro tela_atual = MENU, tela_anterior = SAIR	
-
-	/* Controle de tempo e quadros */
-	inteiro tempo_inicio_frame, tempo_decorrido_frame, tempo_restante_frame
-	inteiro tempo_total_jogo = 0, tempo_inicio_jogo = 0, tempo_inicio_intermitencia = 0
-
-	/* Recursos visuais e sonoros */
-	inteiro imagem_segmento = 0, imagem_comida = 0
-	inteiro imagens_frutas_especiais[5]
-
-	inteiro musica_menu_serpente = -1, musica_jogo_serpente = -1, som_comida = -1, som_derrota = -1
-	inteiro rep_musica_menu = -1, rep_musica_jogo = -1
-	
-	funcao iniciar_serpente()
-	{
-		inicializar_serpente()
-		
-		enquanto (tela_atual != SAIR)
-		{	
-			escolha (tela_atual)
-			{
-				caso JOGO           : tela_jogo()          pare
-				caso VITORIA        : tela_vitoria()       pare
-				caso MENU           : tela_menu()          pare
-				caso DERROTA        : tela_derrota()       pare
-				caso PLACAR         : tela_placar()        pare
-				caso IDENTIFICACAO  : tela_identificacao() pare
-			}
-		}
-		
-		finalizar_serpente()
-	}
-
-	funcao inicializar_serpente()
-	{
-		g.iniciar_modo_grafico(verdadeiro)
-		g.definir_titulo_janela("Serpente Elementar")
-
-		definir_tema(tema_atual)
-		carregar_sons_serpente()
-		carregar_placar()
-		carregar_fontes()
-		carregar_jogo_salvo()
-	}
-
-	funcao carregar_sons_serpente()
-	{
-		cadeia diretorio_sons = "./serpente/sons/"
-
-		musica_menu = sm.carregar_som(diretorio_sons + "musica_menu.mp3")
-		musica_jogo_serpente = sm.carregar_som(diretorio_sons + "musica_jogo.mp3")
-		som_comida  = sm.carregar_som(diretorio_sons + "som_comida.mp3" )
-		som_derrota = sm.carregar_som(diretorio_sons + "som_derrota.mp3")
-	}
-
-	funcao definir_tema(inteiro indice)
-	{
-		tema_atual = indice
-		
-		tema[COR_FUNDO] = tp.cadeia_para_inteiro(TEMAS[tema_atual][COR_FUNDO], 16)
-		tema[COR_TEXTO] = tp.cadeia_para_inteiro(TEMAS[tema_atual][COR_TEXTO], 16)
-		tema[COR_BORDA] = tp.cadeia_para_inteiro(TEMAS[tema_atual][COR_BORDA], 16)	
-		
-		se (nao primeira_execucao)
-		{
-			liberar_imagens()
-		}
-		senao
-		{
-			primeira_execucao = falso
-		}
-		
-		carregar_imagens_serpente()
-		atualizar_dimensoes_janela()
-	}
-
-	funcao carregar_imagens_serpente()
-	{
-		cadeia diretorio_temas = "./serpente/temas/"
-		cadeia diretorio_imagens = diretorio_temas + TEMAS[tema_atual][PASTA_IMAGENS] + "/"
-		
-		imagem_segmento = g.carregar_imagem(diretorio_imagens + "segmento.png")
-		imagem_comida = g.carregar_imagem(diretorio_imagens + "comida.png")
-
-		imagens_frutas_especiais[FRUTA_FOGO]  = g.carregar_imagem(diretorio_imagens + "fruta_fogo.png")
-		imagens_frutas_especiais[FRUTA_GELO]  = g.carregar_imagem(diretorio_imagens + "fruta_gelo.png")
-		imagens_frutas_especiais[FRUTA_PEDRA] = g.carregar_imagem(diretorio_imagens + "fruta_pedra.png")
-		imagens_frutas_especiais[FRUTA_RAIO]  = g.carregar_imagem(diretorio_imagens + "fruta_raio.png")
-		imagens_frutas_especiais[FRUTA_VENTO] = g.carregar_imagem(diretorio_imagens + "fruta_vento.png")
-	}
-
-	funcao carregar_fontes()
-	{
-		g.carregar_fonte("Outros/fontes/poetsen_one_regular.ttf")
-		g.definir_fonte_texto("Poetsen One")
-	}
-
-	funcao atualizar_dimensoes_janela()
-	{
-		tamanho_segmento = g.altura_imagem(imagem_segmento)
-		
-		altura_tela = ALTURA_PAINEL_PONTUACAO + (LINHAS * tamanho_segmento) + (BORDA_CENARIO * 2) + 3
-		largura_tela = (COLUNAS * tamanho_segmento) + (BORDA_CENARIO * 2) + 3
-		
-		g.definir_dimensoes_janela(largura_tela, altura_tela)
-	}
-
-	funcao atualizar_placar()
-	{
-		se (jogador_entra_placar())
-		{
-			inserir_jogador_placar()
-			ordenar_placar()
-			salvar_placar()
-		}
-		senao
-		{
-			entrada_placar = -1
-		}
-	}
-
-	funcao inserir_jogador_placar()
-	{
-		inteiro ultima_linha = u.numero_linhas(placar_jogo) - 1
-		
-		placar_jogo[ultima_linha][NOME_JOGADOR] = nome_jogador
-		placar_jogo[ultima_linha][PONTUACAO] = tp.inteiro_para_cadeia(pontuacao_jogador, 10)
-		placar_jogo[ultima_linha][DIFICULDADE] = tp.inteiro_para_cadeia(dificuldade, 10)
-		placar_jogo[ultima_linha][TEMPO] = tp.inteiro_para_cadeia(tempo_total_jogo, 10)
-
-		entrada_placar = u.numero_linhas(placar_jogo) - 1		
-	}
-
-	funcao logico jogador_entra_placar()
-	{
-		se (placar_possui_posicao_livre())
-		{
-			retorne verdadeiro
-		}
-		senao
-		{
-			inteiro ultima_linha = u.numero_linhas(placar_jogo) - 1
-
-			se (placar_jogo[ultima_linha][NOME_JOGADOR] != "-")
-			{
-				inteiro pontuacao_ultimo = tp.cadeia_para_inteiro(placar_jogo[ultima_linha][PONTUACAO], 10)
-				inteiro dificuldade_ultimo = tp.cadeia_para_inteiro(placar_jogo[ultima_linha][DIFICULDADE], 10)		
-				inteiro tempo_ultimo = tp.cadeia_para_inteiro(placar_jogo[ultima_linha][TEMPO], 10)		
-	
-				inteiro comparacao = pontuacao_jogador - pontuacao_ultimo
-	
-				se (comparacao == 0)
-				{
-					comparacao = dificuldade - dificuldade_ultimo 
-				}
-	
-				se (comparacao == 0)
-				{
-					comparacao = tempo_ultimo - tempo_total_jogo
-				}
-
-				se (comparacao > 0)
-				{
-					retorne verdadeiro
-				}
-				senao				
-				{
-					retorne falso
-				}				
-			}
-			senao 
-			{
-				retorne verdadeiro
-			}
-		}
-	}
-
-	funcao logico placar_possui_posicao_livre()
-	{	
-		para (inteiro i = 0; i < u.numero_linhas(placar_jogo); i++)
-		{
-			se (placar_jogo[i][NOME_JOGADOR] == "-")
-			{
-				retorne verdadeiro
-			}
-		}
-		
-		retorne falso
-	}
-
-	funcao inteiro comparar_posicoes_placar(inteiro posicao_1, inteiro posicao_2)
-	{
-		se (placar_jogo[posicao_1][NOME_JOGADOR] == "-")
-		{
-			retorne -1
-		}
-		se (placar_jogo[posicao_2][NOME_JOGADOR] == "-")
-		{
-			retorne 1
-		}		
-		
-		inteiro resultado = 0
-		
-		inteiro pontuacao_1 = tp.cadeia_para_inteiro(placar_jogo[posicao_1][PONTUACAO], 10)
-		inteiro pontuacao_2 = tp.cadeia_para_inteiro(placar_jogo[posicao_2][PONTUACAO], 10)
-
-		resultado = pontuacao_1 - pontuacao_2
-		
-		se (resultado == 0)
-		{
-			inteiro dificuldade_1 = tp.cadeia_para_inteiro(placar_jogo[posicao_1][DIFICULDADE], 10)
-			inteiro dificuldade_2 = tp.cadeia_para_inteiro(placar_jogo[posicao_2][DIFICULDADE], 10)
-
-			resultado = dificuldade_1 - dificuldade_2
-		}
-
-		se (resultado == 0)
-		{
-			inteiro tempo_1 = tp.cadeia_para_inteiro(placar_jogo[posicao_1][TEMPO], 10)
-			inteiro tempo_2 = tp.cadeia_para_inteiro(placar_jogo[posicao_2][TEMPO], 10)
-			
-			resultado = tempo_2 - tempo_1
-		}
-
-		retorne resultado
-	}
-
-	funcao trocar_posicao_placar(inteiro posicao_1, inteiro posicao_2)
-	{
-		cadeia aux[4]
-
-		aux[NOME_JOGADOR] = placar_jogo[posicao_1][NOME_JOGADOR]
-		aux[PONTUACAO] = placar_jogo[posicao_1][PONTUACAO]
-		aux[DIFICULDADE] = placar_jogo[posicao_1][DIFICULDADE]
-		aux[TEMPO] = placar_jogo[posicao_1][TEMPO]
-
-		placar_jogo[posicao_1][NOME_JOGADOR] = placar_jogo[posicao_2][NOME_JOGADOR]
-		placar_jogo[posicao_1][PONTUACAO] = placar_jogo[posicao_2][PONTUACAO]
-		placar_jogo[posicao_1][DIFICULDADE] = placar_jogo[posicao_2][DIFICULDADE]
-		placar_jogo[posicao_1][TEMPO] = placar_jogo[posicao_2][TEMPO]
-		
-		placar_jogo[posicao_2][NOME_JOGADOR] = aux[NOME_JOGADOR]
-		placar_jogo[posicao_2][PONTUACAO] = aux[PONTUACAO]
-		placar_jogo[posicao_2][DIFICULDADE] = aux[DIFICULDADE]
-		placar_jogo[posicao_2][TEMPO] = aux[TEMPO]
-
-		se (posicao_1 == entrada_placar)
-		{
-			entrada_placar = posicao_2
-		}
-		senao se (posicao_2 == entrada_placar)
-		{
-			entrada_placar = posicao_1
-		}		
-	}
-
-	funcao ordenar_placar()
-	{
-		para (inteiro i = 0; i < u.numero_linhas(placar_jogo); i++)
-		{
-			para (inteiro j = 0; j < u.numero_linhas(placar_jogo) - 1; j++)
-			{
-				inteiro comparacao = comparar_posicoes_placar(j, j + 1)
-
-				se (comparacao < 0)
-				{
-					trocar_posicao_placar(j, j + 1)
-				}
-			}
-		}
-	}
-
-	funcao salvar_placar()
-	{
-		cadeia linha, campo_nome, campo_pontuacao, campo_tempo, campo_dificuldade
-		
-		cadeia diretorio_jogo = u.obter_diretorio_usuario() + "/.portugol/dados/serpente/"
-		cadeia caminho_arquivo = diretorio_jogo + "placar.txt"
-		inteiro arquivo_placar = arq.abrir_arquivo(caminho_arquivo, arq.MODO_ESCRITA)
-
-		para (inteiro i = 0; i < u.numero_linhas(placar_jogo); i++)
-		{
-			campo_nome = placar_jogo[i][NOME_JOGADOR]
-			campo_pontuacao = placar_jogo[i][PONTUACAO]
-			campo_tempo = placar_jogo[i][TEMPO]
-			campo_dificuldade = placar_jogo[i][DIFICULDADE]
-			
-			linha = campo_nome + ";" + campo_tempo + ";" + campo_dificuldade + ";" + campo_pontuacao + ";"
-			arq.escrever_linha(linha, arquivo_placar)
-		}
-
-		arq.fechar_arquivo(arquivo_placar)
-	}
-
-	funcao carregar_placar()
-	{
-		cadeia linha
-		cadeia diretorio_jogo = u.obter_diretorio_usuario() + "/.portugol/dados/serpente/"
-		cadeia caminho_arquivo = diretorio_jogo + "placar.txt"
-
-		se (arq.arquivo_existe(caminho_arquivo))
-		{
-			inteiro arquivo_placar = arq.abrir_arquivo(caminho_arquivo, arq.MODO_LEITURA)		
-			
-			para (inteiro i = 0; i < u.numero_linhas(placar_jogo); i++)
-			{
-				linha = arq.ler_linha(arquivo_placar)
-	
-				placar_jogo[i][NOME_JOGADOR]	= ler_proximo_campo(linha)
-				placar_jogo[i][TEMPO] 		= ler_proximo_campo(linha)
-				placar_jogo[i][DIFICULDADE] 	= ler_proximo_campo(linha)
-				placar_jogo[i][PONTUACAO] 	= ler_proximo_campo(linha)
-			}
-	
-			arq.fechar_arquivo(arquivo_placar)
-		}
-		senao
-		{
-			zerar_placar()
-		}
-	}
-
-	funcao cadeia ler_proximo_campo(cadeia &linha_placar)
-	{
-		inteiro posicao_final = txt.posicao_texto(";", linha_placar, 0)
-		cadeia nome = txt.extrair_subtexto(linha_placar, 0, posicao_final)
-
-		linha_placar = txt.extrair_subtexto(linha_placar, posicao_final + 1, txt.numero_caracteres(linha_placar))
-
-		retorne nome
-	}
-
-	funcao tela_placar()
-	{
-		enquanto (tela_atual == PLACAR)
-		{
-			atualizar_intermitencia(250)
-			desenhar_tela_placar()
-
-			se (t.tecla_pressionada(t.TECLA_ESC))
-			{
-				ir_para_a_tela(MENU)
-			}
-			senao se (t.tecla_pressionada(t.TECLA_DELETAR))
-			{
-				zerar_placar()
-			}
-			senao se (t.tecla_pressionada(t.TECLA_ENTER))
-			{
-				se (tela_anterior == DERROTA ou tela_anterior == VITORIA)
-				{
-					ir_para_a_tela(JOGO)
-				}
-				senao
-				{
-					ir_para_a_tela(MENU)
-				}
-			}
-		}
-
-		entrada_placar = -1
-		u.aguarde(200)
-	}
-
-	funcao zerar_placar()
-	{
-		para (inteiro i = 0; i < u.numero_linhas(placar_jogo); i++)
-		{
-			placar_jogo[i][NOME_JOGADOR] = "-"
-			placar_jogo[i][PONTUACAO] = "-"
-			placar_jogo[i][DIFICULDADE] = "-"			
-			placar_jogo[i][TEMPO] = "-"
-		}
-
-		entrada_placar = -1
-		salvar_placar()
-	}
-
-	funcao carregar_jogo_salvo()
-	{
-		cadeia linha
-		cadeia diretorio_jogo = u.obter_diretorio_usuario() + "/.portugol/dados/serpente/"
-		cadeia caminho_arquivo = diretorio_jogo + "continue.txt"
-		
-		se (arq.arquivo_existe(caminho_arquivo))
-		{
-			inteiro arquivo_continue = arq.abrir_arquivo(caminho_arquivo, arq.MODO_LEITURA)
-			
-			linha = arq.ler_linha(arquivo_continue)
-			nome_jogador = ler_proximo_campo(linha)
-	
-			cadeia campo_pontuacao = ler_proximo_campo(linha)
-			cadeia campo_dificuldade = ler_proximo_campo(linha)
-			cadeia campo_tempo = ler_proximo_campo(linha)
-			cadeia campo_cenario = ler_proximo_campo(linha)
-			cadeia campo_sons = ler_proximo_campo(linha)
-			cadeia campo_tema = ler_proximo_campo(linha)
-	
-			pontuacao_jogador = tp.cadeia_para_inteiro(campo_pontuacao, 10)
-			dificuldade = tp.cadeia_para_inteiro(campo_dificuldade, 10)
-			tempo_total_jogo = tp.cadeia_para_inteiro(campo_tempo, 10)
-			cenario_circular = tp.cadeia_para_logico(campo_cenario)
-			reproduzir_sons = tp.cadeia_para_logico(campo_sons)
-			tema_atual = tp.cadeia_para_inteiro(campo_tema, 10)
-	
-			linha = arq.ler_linha(arquivo_continue)
-	
-			cadeia campo_linha = ler_proximo_campo(linha)
-			cadeia campo_coluna = ler_proximo_campo(linha)
-
-			comida[LINHA] = tp.cadeia_para_inteiro(campo_linha, 10)
-			comida[COLUNA] = tp.cadeia_para_inteiro(campo_coluna, 10)
-			
-			linha = arq.ler_linha(arquivo_continue)
-			cadeia campo_numero_segmentos = ler_proximo_campo(linha)
-	
-			tamanho_serpente = tp.cadeia_para_inteiro(campo_numero_segmentos, 10)
-			CAUDA = tamanho_serpente - 1
-	
-			para (inteiro SEGMENTO = CABECA; SEGMENTO <= CAUDA; SEGMENTO++)
-			{
-				linha = arq.ler_linha(arquivo_continue)
-				
-				cadeia linha_serpente = ler_proximo_campo(linha)
-				cadeia coluna_serpente = ler_proximo_campo(linha)
-				cadeia direcao_serpente = ler_proximo_campo(linha)
-	
-				serpente[SEGMENTO][LINHA] = tp.cadeia_para_inteiro(linha_serpente, 10)
-				serpente[SEGMENTO][COLUNA] = tp.cadeia_para_inteiro(coluna_serpente, 10)
-				serpente[SEGMENTO][DIRECAO] = tp.cadeia_para_inteiro(direcao_serpente, 10)
-			}
-			
-			arq.fechar_arquivo(arquivo_continue)
-			
-			habilitar_continuacao_jogo()
-			definir_tema(tema_atual)
-			ir_para_a_tela(MENU)
-		}
-		senao
-		{
-			recomecar()
-		}
-	}
-
-	funcao salvar_jogo()
-	{
-		cadeia diretorio_jogo = u.obter_diretorio_usuario() + "/.portugol/dados/serpente/"
-		cadeia caminho_arquivo = diretorio_jogo + "continue.txt"
-		inteiro arquivo_continue = arq.abrir_arquivo(caminho_arquivo, arq.MODO_ESCRITA)
-
-		cadeia campo_nome = nome_jogador
-		cadeia campo_pontuacao = tp.inteiro_para_cadeia(pontuacao_jogador, 10)
-		cadeia campo_dificuldade = tp.inteiro_para_cadeia(dificuldade, 10)
-		cadeia campo_tempo = tp.inteiro_para_cadeia(tempo_total_jogo, 10)
-		cadeia campo_cenario = tp.logico_para_cadeia(cenario_circular)
-		cadeia campo_sons = tp.logico_para_cadeia(reproduzir_sons)
-		cadeia campo_tema = tp.inteiro_para_cadeia(tema_atual, 10)		
-		
-		cadeia linha = campo_nome +  ";" + campo_pontuacao + ";" + campo_dificuldade + ";" + 
-					campo_tempo + ";" + campo_cenario + ";" + campo_sons + ";" + campo_tema + ";"
-
-		arq.escrever_linha(linha, arquivo_continue)
-		
-		cadeia linha_comida = tp.inteiro_para_cadeia(comida[LINHA], 10)
-		cadeia coluna_comida = tp.inteiro_para_cadeia(comida[COLUNA], 10)
-		cadeia numero_segmentos = tp.inteiro_para_cadeia(tamanho_serpente, 10)
-
-		linha = linha_comida + ";" + coluna_comida + ";"		
-		arq.escrever_linha(linha, arquivo_continue)
-
-		linha = numero_segmentos + ";"
-		arq.escrever_linha(linha, arquivo_continue)
-
-		para (inteiro SEGMENTO = CABECA; SEGMENTO <= CAUDA; SEGMENTO++)
-		{
-			cadeia linha_serpente = tp.inteiro_para_cadeia(serpente[SEGMENTO][LINHA], 10)
-			cadeia coluna_serpente = tp.inteiro_para_cadeia(serpente[SEGMENTO][COLUNA], 10)
-			cadeia direcao_serpente = tp.inteiro_para_cadeia(serpente[SEGMENTO][DIRECAO], 10)
-
-			linha = linha_serpente + ";" + coluna_serpente + ";" + direcao_serpente + ";"
-			arq.escrever_linha(linha, arquivo_continue)
-		}
-		
-		arq.fechar_arquivo(arquivo_continue)
-	}
-
-	funcao apagar_arquivo_continue()
-	{
-		cadeia diretorio_jogo = u.obter_diretorio_usuario() + "/.portugol/dados/serpente/"
-		cadeia caminho_arquivo = diretorio_jogo + "continue.txt"
-
-		se (arq.arquivo_existe(caminho_arquivo))
-		{
-			arq.apagar_arquivo(caminho_arquivo)
-		}
-	}
-	
-	funcao tela_identificacao()
-	{
-		enquanto (tela_atual == IDENTIFICACAO)
-		{
-			desenhar_tela_identificacao()
-
-			inteiro tecla = t.ler_tecla()
-			
-			se (tecla == t.TECLA_ENTER)
-			{
-				se (identificacao_valida())
-				{
-					ir_para_a_tela(JOGO)
-				}
-			}
-			senao se (tecla == t.TECLA_ESC)
-			{
-				ir_para_a_tela(MENU)
-			}
-			senao se ((tecla >= t.TECLA_A e tecla <= t.TECLA_Z) ou tecla == t.TECLA_ESPACO ou tecla == t.TECLA_BACKSPACE)
-			{
-				atualizar_nome_jogador(tecla)
-			}
-		}
-	}
-
-	funcao logico identificacao_valida()
-	{
-		cadeia texto = txt.substituir(nome_jogador, " ", "")
-		retorne (txt.numero_caracteres(texto) > 0)
-	}
-
-	funcao desenhar_tela_identificacao()
-	{
-		desenhar_fundo_cenario()
-		desenhar_campo_entrada_nome()
-		desenhar_borda_cenario()
-		g.renderizar()
-	}
-
-	funcao desenhar_campo_entrada_nome()
-	{
-		g.definir_tamanho_texto(14.0)
-		g.definir_cor(tema[COR_TEXTO])
-		g.definir_estilo_texto(falso, falso, falso)
-
-		cadeia mensagem = "Digite seu nome: "
-		cadeia texto = "WWWWWWWWWWWWWWWWWWWWWWWWW_"
-		
-		inteiro espacamento = 10
-		inteiro margem_campo = 8
-		inteiro largura_campo = g.largura_texto(texto) + (margem_campo * 2)
-		inteiro altura_campo = g.altura_texto(texto) + (margem_campo * 2)
-		inteiro altura_mensagem = g.altura_texto(mensagem)		
-
-		inteiro borda_vertical = 10
-		inteiro borda_horizontal = 10
-		inteiro largura_quadro = largura_campo + (borda_horizontal * 2)
-		inteiro altura_quadro = altura_mensagem + espacamento + altura_campo + (borda_vertical * 2)
-		inteiro x = (largura_tela / 2) - (largura_quadro / 2)
-		inteiro y = ((altura_tela + ALTURA_PAINEL_PONTUACAO) / 2) - (altura_quadro / 2)
-
-		g.definir_cor(tema[COR_BORDA])
-		g.desenhar_retangulo(x, y, largura_quadro, altura_quadro, falso, falso)
-
-		x = x + borda_horizontal
-		y = y + borda_vertical
-		
-		g.desenhar_texto(x, y, mensagem)
-		y = y + g.altura_texto(mensagem) + espacamento
-		g.desenhar_retangulo(x, y, largura_campo, altura_campo, falso, falso)
-		
-		g.desenhar_texto(x + margem_campo, y + margem_campo, nome_jogador + "_")
-	}
-
-	funcao atualizar_nome_jogador(inteiro tecla)
-	{
-		inteiro tamanho = txt.numero_caracteres(nome_jogador)
-		
-		se (tecla == t.TECLA_BACKSPACE)
-		{
-			se (tamanho >= 1)
-			{			
-				nome_jogador = txt.extrair_subtexto(nome_jogador, 0, tamanho - 1)
-			}
-		}
-		senao se (tamanho + 1 <= 25)
-		{
-			nome_jogador = nome_jogador + t.caracter_tecla(tecla)
-		}
-	}
-
-	funcao desenhar_tela_placar()
-	{
-		desenhar_fundo_cenario()
-		desenhar_conteudo_placar()
-		desenhar_borda_cenario()
-		g.renderizar()
-	}
-
-	funcao desenhar_conteudo_placar()
-	{
-		g.definir_tamanho_texto(20.0)
-		g.definir_cor(tema[COR_TEXTO])
-		g.definir_estilo_texto(falso, falso, falso)
-		
-		cadeia titulo = "PLACAR"
-		
-		inteiro borda = 12
-		inteiro largura_titulo = g.largura_texto(titulo)
-		inteiro x_titulo = (largura_tela / 2) - (largura_titulo / 2)
-		inteiro y_titulo = ALTURA_PAINEL_PONTUACAO + BORDA_CENARIO + borda
-
-		g.desenhar_texto(x_titulo, y_titulo, titulo)
-		
-		inteiro y = y_titulo + g.altura_texto("PLACAR") + borda
-
-		g.definir_tamanho_texto(14.0)
-		
-		inteiro x_tempo = largura_tela - BORDA_CENARIO - 20 - g.largura_texto("Tempo")
-		inteiro x_dificuldade = x_tempo - 20 - g.largura_texto("Dificuldade")
-		inteiro x_pontuacao = x_dificuldade - 20 - g.largura_texto("Pontuação")
-		inteiro x_posicao = BORDA_CENARIO + 10
-		inteiro x_nome = x_posicao + g.largura_texto("Pos.") + 10
-
-		g.definir_cor(tema[COR_BORDA])
-		
-		g.desenhar_linha(x_posicao, y, x_tempo + g.largura_texto("Tempo") + 10, y)
-		y = y + 6		
-
-		g.desenhar_texto(x_posicao, y, "Pos.")
-		g.desenhar_texto(x_nome, y, "Nome")
-		g.desenhar_texto(x_pontuacao, y, "Pontuação")
-		g.desenhar_texto(x_dificuldade, y, "Dificuldade")		
-		g.desenhar_texto(x_tempo, y, "Tempo")
-
-		y = y + g.altura_texto("Nome") + 6
-		g.desenhar_linha(x_posicao, y, x_tempo + g.largura_texto("Tempo") + 10, y)
-		y = y + borda
-		
-		para (inteiro i = 0; i < u.numero_linhas(placar_jogo); i++)
-		{
-			cadeia campo_posicao = txt.preencher_a_esquerda('0', 2, tp.inteiro_para_cadeia((i + 1), 10)) + "."
-			cadeia campo_nome = texto_nome_placar(i)
-			cadeia campo_dificuldade = texto_dificuldade_placar(i)
-			cadeia campo_tempo = texto_tempo_placar(i)
-			cadeia campo_pontuacao = texto_pontuacao_placar(i)
-
-			g.desenhar_texto(x_posicao, y, campo_posicao)
-			g.desenhar_texto(x_nome, y, campo_nome)
-			g.desenhar_texto(x_dificuldade, y, campo_dificuldade)
-			g.desenhar_texto(x_pontuacao, y, campo_pontuacao)
-			g.desenhar_texto(x_tempo, y, campo_tempo)
-
-			se (entrada_placar == i e exibir_intermitencia)
-			{
-				inteiro largura = x_tempo + g.largura_texto("Tempo") + 14 - x_posicao - 4
-				inteiro altura = g.altura_texto(campo_nome) + 8
-				
-				g.desenhar_retangulo(x_posicao - 4, y - 6, largura, altura, falso, falso)
-			}
-
-			y = y + g.altura_texto("Nome") + 15
-		}
-
-		inteiro x, largura_mensagem, altura_mensagem
-		g.desenhar_linha(x_posicao, y, x_tempo + g.largura_texto("Tempo") + 10, y)
-
-		cadeia mensagem
-		inteiro k = altura_tela - BORDA_CENARIO		
-		y = k - ((k - y) / 2)
-
-		mensagem = "Pressione [ ENTER ] para continuar"		
-		largura_mensagem = g.largura_texto(mensagem)
-		altura_mensagem = g.altura_texto(mensagem)
-		x = (largura_tela / 2) - (largura_mensagem / 2)
-		g.desenhar_texto(x, y - altura_mensagem - 15, mensagem)
-
-		mensagem = "Pressione [ DELETE ] para zerar o placar"
-		largura_mensagem = g.largura_texto(mensagem)
-		altura_mensagem = g.altura_texto(mensagem)
-		x = (largura_tela / 2) - (largura_mensagem / 2)
-		g.desenhar_texto(x, y - (altura_mensagem / 2), mensagem)
-
-		mensagem = "Pressione [ ESC ] para voltar ao menu"
-		largura_mensagem = g.largura_texto(mensagem)
-		altura_mensagem = g.altura_texto(mensagem)
-		x = (largura_tela / 2) - (largura_mensagem / 2)
-		g.desenhar_texto(x, y + 15, mensagem)
-	}
-
-	funcao cadeia texto_pontuacao_placar(inteiro indice)
-	{
-		cadeia texto = placar_jogo[indice][PONTUACAO]
-		se (texto == "-") { texto = "----" }
-		retorne texto
-	}
-
-	funcao cadeia texto_nome_placar(inteiro indice)
-	{
-		cadeia texto = placar_jogo[indice][NOME_JOGADOR]
-		se (texto == "-") { texto = "-------------------------" }
-		retorne texto
-	}
-
-	funcao cadeia texto_tempo_placar(inteiro indice)
-	{
-		cadeia texto = placar_jogo[indice][TEMPO]
-		se (texto != "-")
-		{
-			inteiro tempo = tp.cadeia_para_inteiro(texto, 10)
-			texto = formatar_tempo(tempo)
-		}
-		senao { texto = "--:--" }
-		retorne texto
-	}
-
-	funcao cadeia texto_dificuldade_placar(inteiro indice)
-	{
-		cadeia texto = placar_jogo[indice][DIFICULDADE]
-		se (texto != "-")
-		{
-			inteiro dif = tp.cadeia_para_inteiro(texto, 10)
-			texto = texto_opcao_dificuldade(dif)
-			texto = txt.substituir(texto, "Dificuldade: ", "")
-		}
-		senao { texto = "------------" }
-		retorne texto
-	}
-
-	funcao ir_para_a_tela(inteiro nova_tela)
-	{
-		se (nova_tela != tela_atual)
-		{
-			tela_anterior = tela_atual
-			tela_atual = nova_tela
-		}
-	}
-
-	funcao tela_vitoria()
-	{
-		atualizar_placar()
-		desabilitar_continuacao_jogo()
-		
-		enquanto (tela_atual == VITORIA)
-		{
-			desenhar_tela_vitoria()
-
-			se (t.tecla_pressionada(t.TECLA_ESC)) { ir_para_a_tela(MENU) }
-			senao se (t.tecla_pressionada(t.TECLA_ENTER)) { ir_para_a_tela(PLACAR) }
-		}
-
-		u.aguarde(200)
-	}
-
-	funcao tela_derrota()
-	{
-		atualizar_placar()
-		desabilitar_continuacao_jogo()
-		
-		enquanto (tela_atual == DERROTA)
-		{
-			desenhar_tela_derrota()
-
-			se (t.tecla_pressionada(t.TECLA_ESC)) { ir_para_a_tela(MENU) }
-			senao se (t.tecla_pressionada(t.TECLA_ENTER)) { ir_para_a_tela(PLACAR) }
-		}
-
-		u.aguarde(200)
-	}
-
-	funcao desabilitar_continuacao_jogo()
-	{
-		continuar = falso
-		pode_continuar = falso
-		apagar_arquivo_continue()
-	}
-
-	funcao desenhar_tela_vitoria()
-	{
-		cadeia itens[] = 
-		{
-			"Parabéns você venceu o jogo!",
-			"Pressione [ ENTER ] para continuar",
-			"Pressione [ ESC ] para voltar ao menu"
-		}
-
-		desenhar_tela_jogo()
-		desenhar_popup(itens, -1)
-		g.renderizar()
-	}
-
-	funcao desenhar_tela_derrota()
-	{		
-		cadeia itens[] = 
-		{
-			"Que pena você perdeu o jogo!",
-			"Pressione [ ENTER ] para continuar",
-			"Pressione [ ESC ] para voltar ao menu"
-		}
-
-		desenhar_tela_jogo()		
-		desenhar_popup(itens, -1)
-		g.renderizar()
-	}
-
-	funcao tela_menu()
-	{
-		reproduzir_musica_menu()	
-		
-		enquanto (tela_atual == MENU)
-		{
-			atualizar_intermitencia(200)
-			pausar_contador_tempo()
-			desenhar_tela_menu()
-
-			se (t.tecla_pressionada(t.TECLA_ENTER))
-			{
-				se (continuar)
-				{
-					ir_para_a_tela(JOGO)
-				}
-				senao
-				{
-					ir_para_a_tela(IDENTIFICACAO)
-					u.aguarde(200)
-				}
-			}
-			senao se (t.tecla_pressionada(t.TECLA_ESC))
-			{
-				ir_para_a_tela(SAIR)
-			}
-			senao se (t.tecla_pressionada(t.TECLA_ESPACO))
-			{
-				ir_para_a_tela(PLACAR)
-			}
-			senao se (t.tecla_pressionada(t.TECLA_SETA_ABAIXO) ou t.tecla_pressionada(t.TECLA_SETA_ACIMA))
-			{
-				selecionar_opcao_menu()
-			}
-			senao se (t.tecla_pressionada(t.TECLA_SETA_ESQUERDA) ou t.tecla_pressionada(t.TECLA_SETA_DIREITA))
-			{
-				escolha (opcao_menu_serpente)
-				{
-					caso OPCAO_NOVO_JOGO	: alternar_opcao_novo_jogo()  pare					
-					caso OPCAO_SONS 	 	: alternar_opcao_sons()       pare
-					caso OPCAO_CENARIO		: alternar_opcao_cenario()    pare					
-					caso OPCAO_DIFICULDADE 	: alternar_opcao_dificuldade()pare
-					caso OPCAO_TEMA 		: alternar_opcao_tema()       pare
-				}
-				u.aguarde(200) 
-			}
-		}
-	}
-
-	funcao atualizar_intermitencia(inteiro intervalo)
-	{
-		se (u.tempo_decorrido() - tempo_inicio_intermitencia >= intervalo)
-		{
-			exibir_intermitencia = nao exibir_intermitencia
-			tempo_inicio_intermitencia = u.tempo_decorrido()
-		}
-	}
-
-	funcao selecionar_opcao_menu()
-	{
-		se (t.tecla_pressionada(t.TECLA_SETA_ACIMA))
-		{
-			opcao_menu_serpente = (5 + opcao_menu_serpente - 1) % 5
-		}
-		se (t.tecla_pressionada(t.TECLA_SETA_ABAIXO))
-		{
-			opcao_menu_serpente = (opcao_menu_serpente + 1) % 5
-		}
-		u.aguarde(200)
-	}
-
-	funcao inteiro alternar_opcao_dificuldade()
-	{
-		se (t.tecla_pressionada(t.TECLA_SETA_ESQUERDA))
-		{
-			dificuldade = (6 + dificuldade - 1) % 6
-		}
-		senao se (t.tecla_pressionada(t.TECLA_SETA_DIREITA))
-		{
-			dificuldade = (dificuldade + 1) % 6
-		}
-
-		se (dificuldade == CHUCK_NORRIS) { cenario_circular = falso }
-		desabilitar_continuacao_jogo()
-		retorne 0
-	}
-
-	funcao inteiro alternar_opcao_tema()
-	{
-		se (t.tecla_pressionada(t.TECLA_SETA_ESQUERDA))
-		{
-			tema_atual = (u.numero_linhas(TEMAS) + tema_atual - 1) % u.numero_linhas(TEMAS)
-		}
-		senao se (t.tecla_pressionada(t.TECLA_SETA_DIREITA))
-		{
-			tema_atual = (tema_atual + 1) % u.numero_linhas(TEMAS)
-		}
-		definir_tema(tema_atual)
-		retorne 0
-	}
-
-	funcao alternar_opcao_cenario()
-	{
-		se (dificuldade != CHUCK_NORRIS)
-		{
-			cenario_circular = (nao cenario_circular)
-		}
-		senao { cenario_circular = falso }
-		desabilitar_continuacao_jogo()
-	}
-
-	funcao alternar_opcao_novo_jogo()
-	{
-		se (pode_continuar) { continuar = (nao continuar) }
-		senao { continuar = falso }
-	}
-
-	funcao alternar_opcao_sons()
-	{
-		reproduzir_sons = nao reproduzir_sons
-
-		se (reproduzir_sons e rep_musica_menu < 0)
-		{
-			rep_musica_menu = sm.reproduzir_som(musica_menu, verdadeiro)
-		}
-		senao se (nao reproduzir_sons e rep_musica_menu >= 0)
-		{
-			sm.interromper_som(rep_musica_menu)
-			rep_musica_menu = -1
-		}
-	}
-
-	funcao reproduzir_musica_menu()
-	{
-		se (reproduzir_sons e rep_musica_jogo >= 0)
-		{
-			sm.interromper_som(rep_musica_jogo)
-			rep_musica_jogo = -1
-		}
-
-		se (reproduzir_sons e rep_musica_menu < 0)
-		{
-			rep_musica_menu = sm.reproduzir_som(musica_menu, verdadeiro)
-		}
-	}
-
-	funcao interromper_musica_menu()
-	{
-		se (reproduzir_sons)
-		{
-			sm.interromper_som(rep_musica_menu)
-			rep_musica_menu = -1
-		}
-	}
-
-	funcao pausar_contador_tempo()
-	{
-		tempo_inicio_jogo = u.tempo_decorrido() - tempo_total_jogo
-	}
-
-	funcao desenhar_tela_menu()
-	{
-		cadeia itens[] =  
-		{
-			"Bem vindo ao jogo da serpente",
-			"================================",
-			" ",
-			" ",
-			texto_opcao_continuar(),			
-			texto_opcao_dificuldade(dificuldade),
-			texto_opcao_cenario(),
-			texto_opcao_sons(),
-			texto_opcao_tema(),
-			" ",
-			" ",
-			"================================",
-			"Pressione [ ENTER ] para iniciar o jogo",
-			"Pressione [ ESPAÇO ] para exibir o placar",
-			"Pressione [ ESC ] para sair"
-		}
-		
-		desenhar_fundo_cenario()
-
-		se (exibir_intermitencia)
-		{
-			desenhar_popup(itens, indice_opcao_selecionada())
-		}
-		senao
-		{
-			desenhar_popup(itens, -1)
-		}
-		
-		desenhar_borda_cenario()
-		g.renderizar()
-	}
-
-	funcao desenhar_popup(cadeia itens[], inteiro selecao)
-	{
-		g.definir_tamanho_texto(14.0)
-		g.definir_cor(tema[COR_TEXTO])
-		g.definir_estilo_texto(falso, falso, falso)
-		
-		inteiro borda_vertical = 10
-		inteiro borda_horizontal = 30
-		inteiro largura = calcular_largura_menu(itens) + (borda_horizontal * 2)
-		inteiro altura = calcular_altura_menu(itens) + (borda_vertical * 2)
-		inteiro x = (largura_tela / 2) - (largura / 2)
-		inteiro y = ((altura_tela + ALTURA_PAINEL_PONTUACAO) / 2) - (altura / 2)
-		
-		g.definir_cor(tema[COR_FUNDO])
-		g.desenhar_retangulo(x, y, largura, altura, falso, verdadeiro)
-		
-		g.definir_cor(tema[COR_BORDA])
-		g.desenhar_retangulo(x, y, largura, altura, falso, falso)
-
-		inteiro x_item = x + borda_horizontal, y_item = y + borda_vertical, largura_item = calcular_largura_menu(itens), altura_item
-		inteiro centro_x, centro_y
-		
-		para (inteiro i = 0; i < u.numero_elementos(itens); i++)
-		{
-			cadeia item = itens[i]
-			
-			altura_item = calcular_altura_item_quadro(item)			
-			centro_x = x_item + (largura_item / 2) - (g.largura_texto(item) / 2)
-			centro_y = y_item + (altura_item / 2) - (g.altura_texto(item) / 2)
-			
-			g.desenhar_texto(centro_x, centro_y, item)
-
-			se (selecao == i)
-			{
-				g.desenhar_texto(centro_x - g.largura_texto(">>") - 5, centro_y, ">>")
-				g.desenhar_texto(centro_x + g.largura_texto(item) + 5, centro_y, "<<")
-			}
-			
-			y_item = y_item + altura_item
-		}
-	}
-	
-	funcao inteiro indice_opcao_selecionada()
-	{
-		escolha (opcao_menu_serpente)
-		{
-			caso OPCAO_NOVO_JOGO	: retorne 4
-			caso OPCAO_DIFICULDADE	: retorne 5
-			caso OPCAO_CENARIO		: retorne 6
-			caso OPCAO_SONS		: retorne 7
-			caso OPCAO_TEMA		: retorne 8
-		}
-		retorne 4
-	}	
-
-	funcao inteiro calcular_altura_menu(cadeia itens[])
-	{
-		inteiro altura = 0
-		para (inteiro i = 0; i < u.numero_elementos(itens); i++)
-		{
-			altura = altura + calcular_altura_item_quadro(itens[i])
-		}
-		retorne altura
-	}
-
-	funcao inteiro calcular_largura_menu(cadeia itens[])
-	{
-		real largura = 0.0
-		para (inteiro i = 0; i < u.numero_elementos(itens); i++)
-		{
-			largura = mat.maior_numero(tp.inteiro_para_real(g.largura_texto(itens[i])), largura)
-		}
-		retorne tp.real_para_inteiro(largura)
-	}
-
-	funcao inteiro calcular_altura_item_quadro(cadeia item)
-	{
-		se (item != " ") { retorne g.altura_texto(item) + 7 }
-		senao { retorne 4 }
-	}
-
-	funcao cadeia texto_opcao_continuar()
-	{
-		se (continuar) { retorne "Continuar" }
-		senao { retorne "Novo Jogo" }		
-	}
-
-	funcao cadeia texto_opcao_dificuldade(inteiro opcao_dificuldade)
-	{
-		cadeia texto_dificuldade = "Dificuldade: "
-
-		escolha (opcao_dificuldade)
-		{
-			caso MUITO_FACIL	: retorne texto_dificuldade + "Muito Fácil"
-			caso FACIL		: retorne texto_dificuldade + "Fácil"
-			caso MEDIO		: retorne texto_dificuldade + "Médio"
-			caso DIFICIL		: retorne texto_dificuldade + "Difícil"
-			caso MUITO_DIFICIL	: retorne texto_dificuldade + "Muito Difícil"
-			caso CHUCK_NORRIS	: retorne texto_dificuldade + "Chuck Norris"
-		}
-		retorne "Dificuldade inválida"
-	}
-
-	funcao cadeia texto_opcao_sons()
-	{
-		se (reproduzir_sons) { retorne "Reproduzir Sons: Sim" }
-		senao { retorne "Reproduzir Sons: Não" }
-	}
-
-	funcao cadeia texto_opcao_cenario()
-	{
-		se (cenario_circular) { retorne "Cenário Circular: Sim" }
-		senao { retorne "Cenário Circular: Não" }
-	}
-
-	funcao cadeia texto_opcao_tema()
-	{
-		retorne "Tema: " + TEMAS[tema_atual][NOME_TEMA]
-	}
-	
-	funcao recomecar()
-	{
-		inteiro coluna_central = (COLUNAS / 2)
-		inteiro linha_inicial = LINHAS - TAMANHO_INICIAL_SERPENTE - 1
-
-		tamanho_serpente = TAMANHO_INICIAL_SERPENTE
-		CAUDA = tamanho_serpente - 1
-
-		para (inteiro SEGMENTO = CABECA; SEGMENTO <= CAUDA; SEGMENTO++)
-		{
-			serpente[SEGMENTO][COLUNA] = coluna_central
-			serpente[SEGMENTO][LINHA] = linha_inicial + SEGMENTO
-			serpente[SEGMENTO][DIRECAO] = ACIMA
-		}
-
-		ultimo_estado_cauda[LINHA] = serpente[CAUDA][LINHA]
-		ultimo_estado_cauda[COLUNA] = serpente[CAUDA][COLUNA]
-		ultimo_estado_cauda[DIRECAO] = serpente[CAUDA][DIRECAO]
-
-		fruta_especial_ativa = falso
-		contador_comidas_normais = 0
-		efeito_ativo = -1
-		duracao_efeito = 0
-
-		atualizar_posicao_comida()
-		pontuacao_jogador = 0
-		tempo_inicio_jogo = u.tempo_decorrido()
-		tempo_total_jogo = 0		
-	}
-
-	funcao tela_jogo()
-	{
-		interromper_musica_menu()
-		reproduzir_musica_jogo()
-
-		se (nao continuar) { recomecar() }		
-
-		habilitar_continuacao_jogo()
-		aguardar_inicio()
-		tempo_inicio_jogo = u.tempo_decorrido() - tempo_total_jogo
-		
-		enquanto (tela_atual == JOGO)
-		{
-			tempo_total_jogo = u.tempo_decorrido() - tempo_inicio_jogo
-			tempo_inicio_frame = u.tempo_decorrido()
-	
-			atualizar_jogo_serpente()
-			desenhar_tela_jogo()
-			g.renderizar()
-
-			sincronizar_taxa_de_atualizacao()
-			
-			se (t.tecla_pressionada(t.TECLA_ESC))
-			{
-				ir_para_a_tela(MENU)
-				u.aguarde(200)
-			}
-		}
-
-		salvar_jogo()
-	}
-
-	funcao sincronizar_taxa_de_atualizacao()
-	{
-		tempo_decorrido_frame = u.tempo_decorrido() - tempo_inicio_frame
-		
-		inteiro intervalo = INTERVALO_ATUALIZACAO[dificuldade]
-		se (efeito_ativo == FRUTA_GELO)
-		{
-			intervalo = intervalo * 3
-		}
-
-		tempo_restante_frame = intervalo - tempo_decorrido_frame 
-
-		se (tempo_restante_frame > 0)
-		{				
-			u.aguarde(tempo_restante_frame)
-		}
-	}
-
-	funcao aguardar_inicio()
-	{
-		para (inteiro i = 3; i >= 1; i--)
-		{
-			cadeia itens[] =
-			{
-				"Prepare-se para jogar!!",
-				"Iniciando em: " + i
-			}
-			
-			desenhar_tela_jogo()
-			desenhar_popup(itens, -1)
-			g.renderizar()
-
-			reproduzir_som_comida()
-			u.aguarde(1000)			
-		}
-
-		reproduzir_som_comida()
-	}
-
-	funcao habilitar_continuacao_jogo()
-	{
-		pode_continuar = verdadeiro
-		continuar = verdadeiro
-	}	
-
-	funcao reproduzir_musica_jogo()
-	{
-		se (reproduzir_sons e rep_musica_jogo < 0)
-		{
-			rep_musica_jogo = sm.reproduzir_som(musica_jogo_serpente, verdadeiro)
-		}
-	}
-
-	funcao atualizar_posicao_comida()
-	{
-		comida[LINHA]  = u.sorteia(0, LINHAS  - 1)
-		comida[COLUNA] = u.sorteia(0, COLUNAS - 1)
-
-		enquanto (local_comida_invalido())
-		{
-			comida[COLUNA] = (comida[COLUNA] + 1) % COLUNAS
-
-			se (comida[COLUNA] == 0)
-			{
-				comida[LINHA]  = (comida[LINHA]  + 1) % LINHAS
-			}
-		}
-	}
-
-	funcao logico local_comida_invalido()
-	{
-		para (inteiro SEGMENTO = CABECA; SEGMENTO <= CAUDA; SEGMENTO++)
-		{
-			se (comida[LINHA] == serpente[SEGMENTO][LINHA] e comida[COLUNA] == serpente[SEGMENTO][COLUNA])
-			{
-				retorne verdadeiro
-			}
-		}
-		retorne falso
-	}
-
-	funcao atualizar_jogo_serpente()
-	{
-		ler_entrada_usuario()
-		
-		atualizar_posicao_segmentos()
-		atualizar_posicao_cabeca()
-		atualizar_estado_jogo()
-
-		se (duracao_efeito > 0)
-		{
-			duracao_efeito = duracao_efeito - 1
-
-			se (efeito_ativo == FRUTA_FOGO)
-			{
-				pontuacao_jogador = pontuacao_jogador + 1
-			}
-
-			se (duracao_efeito <= 0)
-			{
-				efeito_ativo = -1
-			}
-		}
-	}
-
-	funcao atualizar_estado_jogo()
-	{
-		se (serpente_bateu())
-		{
-			reproduzir_som_derrota()
-			retroceder_serpente()
-			ir_para_a_tela(DERROTA)
-		}
-		senao
-		{
-			se (serpente_pegou_comida())
-			{
-				reproduzir_som_comida()
-				aumentar_serpente()
-				atualizar_pontuacao()
-				
-				contador_comidas_normais = contador_comidas_normais + 1
-
-				se (contador_comidas_normais >= 3 e nao fruta_especial_ativa)
-				{
-					gerar_fruta_especial()
-					contador_comidas_normais = 0
-				}
-
-				se (tamanho_serpente < TAMANHO_MAXIMO_SERPENTE)
-				{				
-					atualizar_posicao_comida()
-				}
-				senao
-				{
-					ir_para_a_tela(VITORIA)
-				}
-			}
-
-			se (fruta_especial_ativa)
-			{
-				se (serpente_pegou_fruta_especial())
-				{
-					reproduzir_som_comida()
-					aplicar_efeito_fruta_especial()
-					fruta_especial_ativa = falso
-				}
-				senao
-				{
-					tempo_spawn_fruta = tempo_spawn_fruta - 1
-					se (tempo_spawn_fruta <= 0)
-					{
-						fruta_especial_ativa = falso
-					}
-				}
-			}
-		}
-	}
-
-	funcao gerar_fruta_especial()
-	{
-		fruta_especial[LINHA]  = u.sorteia(0, LINHAS  - 1)
-		fruta_especial[COLUNA] = u.sorteia(0, COLUNAS - 1)
-		tipo_fruta_especial    = u.sorteia(0, 4)
-
-		enquanto (local_fruta_especial_invalido())
-		{
-			fruta_especial[COLUNA] = (fruta_especial[COLUNA] + 1) % COLUNAS
-
-			se (fruta_especial[COLUNA] == 0)
-			{
-				fruta_especial[LINHA]  = (fruta_especial[LINHA]  + 1) % LINHAS
-			}
-		}
-
-		fruta_especial_ativa = verdadeiro
-		tempo_spawn_fruta = 180 
-	}
-
-	funcao aplicar_efeito_fruta_especial()
-	{
-		escolha (tipo_fruta_especial)
-		{
-			caso FRUTA_FOGO:
-				efeito_ativo = FRUTA_FOGO
-				duracao_efeito = 100
-				pontuacao_jogador = pontuacao_jogador + (VALOR_COMIDA[dificuldade] * 3)
-				pare
-
-			caso FRUTA_GELO:
-				efeito_ativo = FRUTA_GELO
-				duracao_efeito = 80
-				pare
-
-			caso FRUTA_PEDRA:
-				efeito_ativo = FRUTA_PEDRA
-				duracao_efeito = 120
-				pare
-
-			caso FRUTA_RAIO:
-				pontuacao_jogador = pontuacao_jogador + (VALOR_COMIDA[dificuldade] * 5)
-				teleportar_cabeca_segura()
-				pare
-
-			caso FRUTA_VENTO:
-				encolher_serpente_vento()
-				pare
-		}
-	}
-
-	funcao teleportar_cabeca_segura()
-	{
-		inteiro nova_linha = 0, nova_coluna = 0
-		logico posicao_valida = falso
-
-		enquanto (nao posicao_valida)
-		{
-			nova_linha = u.sorteia(2, LINHAS - 3)
-			nova_coluna = u.sorteia(2, COLUNAS - 3)
-			posicao_valida = verdadeiro
-
-			para (inteiro i = CABECA + 1; i <= CAUDA; i++)
-			{
-				se (serpente[i][LINHA] == nova_linha e serpente[i][COLUNA] == nova_coluna)
-				{
-					posicao_valida = falso
-					pare
-				}
-			}
-		}
-
-		serpente[CABECA][LINHA] = nova_linha
-		serpente[CABECA][COLUNA] = nova_coluna
-	}
-
-	funcao encolher_serpente_vento()
-	{
-		inteiro corte = 3
-		enquanto (corte > 0 e tamanho_serpente > TAMANHO_INICIAL_SERPENTE)
-		{
-			CAUDA = CAUDA - 1
-			tamanho_serpente = tamanho_serpente - 1
-			corte = corte - 1
-		}
-	}
-
-	funcao logico local_fruta_especial_invalido()
-	{
-		se (fruta_especial[LINHA] == comida[LINHA] e fruta_especial[COLUNA] == comida[COLUNA])
-		{
-			retorne verdadeiro
-		}
-
-		para (inteiro SEGMENTO = CABECA; SEGMENTO <= CAUDA; SEGMENTO++)
-		{
-			se (fruta_especial[LINHA] == serpente[SEGMENTO][LINHA] e fruta_especial[COLUNA] == serpente[SEGMENTO][COLUNA])
-			{
-				retorne verdadeiro
-			}
-		}
-		retorne falso
-	}
-
-	funcao logico serpente_pegou_fruta_especial()
-	{
-		retorne (serpente[CABECA][LINHA] == fruta_especial[LINHA] e serpente[CABECA][COLUNA] == fruta_especial[COLUNA])
-	}
-
-	funcao reproduzir_som_derrota()
-	{
-		se (reproduzir_sons) { sm.reproduzir_som(som_derrota, falso) }
-	}
-	
-	funcao reproduzir_som_comida()
-	{
-		se (reproduzir_sons) { sm.reproduzir_som(som_comida, falso) }
-	}
-	
-	funcao atualizar_pontuacao()
-	{
-		inteiro valor = VALOR_COMIDA[dificuldade]
-
-		se (efeito_ativo == FRUTA_FOGO)
-		{
-			valor = valor * 3
-		}
-
-		se (cenario_circular)
-		{		
-			valor = tp.real_para_inteiro(mat.maior_numero(valor / 2.0, 1.0))
-		}
-			
-		pontuacao_jogador = pontuacao_jogador + valor
-	}
-
-	funcao retroceder_serpente()
-	{
-		para (inteiro SEGMENTO = CABECA; SEGMENTO < CAUDA; SEGMENTO++)
-		{
-			serpente[SEGMENTO][LINHA] = serpente[SEGMENTO + 1][LINHA]
-			serpente[SEGMENTO][COLUNA] = serpente[SEGMENTO + 1][COLUNA]
-			serpente[SEGMENTO][DIRECAO] = serpente[SEGMENTO + 1][DIRECAO]
-		}
-
-		serpente[CAUDA][LINHA] 	= ultimo_estado_cauda[LINHA]
-		serpente[CAUDA][COLUNA] 	= ultimo_estado_cauda[COLUNA]
-		serpente[CAUDA][DIRECAO] = ultimo_estado_cauda[DIRECAO]
-	}
-
-	funcao aumentar_serpente()
-	{	
-		inteiro linha = serpente[CAUDA][LINHA]
-		inteiro coluna = serpente[CAUDA][COLUNA]
-		inteiro direcao = serpente[CAUDA][DIRECAO]
-
-		CAUDA = CAUDA + 1
-
-		serpente[CAUDA][LINHA]   = linha
-		serpente[CAUDA][COLUNA]  = coluna
-		serpente[CAUDA][DIRECAO] = direcao
-
-		tamanho_serpente = tamanho_serpente + 1
-	}
-
-	funcao logico serpente_bateu()
-	{
-		retorne (cabeca_bateu_parede() ou cabeca_bateu_corpo())
-	}
-
-	funcao logico cabeca_bateu_parede()
-	{
-		inteiro linha = serpente[CABECA][LINHA]
-		inteiro coluna = serpente[CABECA][COLUNA]
-
-		se (efeito_ativo == FRUTA_PEDRA)
-		{
-			se (linha < 0) { serpente[CABECA][LINHA] = LINHAS - 1 }
-			senao se (linha >= LINHAS) { serpente[CABECA][LINHA] = 0 }
-
-			se (coluna < 0) { serpente[CABECA][COLUNA] = COLUNAS - 1 }
-			senao se (coluna >= COLUNAS) { serpente[CABECA][COLUNA] = 0 }
-
-			retorne falso
-		}
-
-		se (linha < 0 ou linha >= LINHAS) { retorne verdadeiro }
-		se (coluna < 0 ou coluna >= COLUNAS) { retorne verdadeiro }
-
-		retorne falso
-	}
-
-	funcao logico cabeca_bateu_corpo()
-	{
-		se (efeito_ativo == FRUTA_PEDRA)
-		{
-			retorne falso
-		}
-
-		para (inteiro SEGMENTO = CABECA + 1; SEGMENTO <= CAUDA; SEGMENTO++)
-		{
-			se 
-			(
-				serpente[CABECA][LINHA] == serpente[SEGMENTO][LINHA] e
-				serpente[CABECA][COLUNA] == serpente[SEGMENTO][COLUNA]
-			)
-			{
-				retorne verdadeiro
-			}			
-		}
-		retorne falso
-	}
-
-	funcao logico serpente_pegou_comida()
-	{
-		retorne (serpente[CABECA][LINHA] == comida[LINHA] e serpente[CABECA][COLUNA] == comida[COLUNA])		
-	}
-
-	funcao atualizar_posicao_cabeca()
-	{
-		se (serpente[CABECA][DIRECAO] == ACIMA)
-		{
-			se (cenario_circular)
-			{
-				serpente[CABECA][LINHA] = (LINHAS + serpente[CABECA][LINHA] - 1) % LINHAS 
-			}
-			senao { serpente[CABECA][LINHA] = serpente[CABECA][LINHA] - 1 }
-		}
-		senao se (serpente[CABECA][DIRECAO] == ABAIXO)
-		{
-			se (cenario_circular)
-			{
-				serpente[CABECA][LINHA] = (serpente[CABECA][LINHA] + 1) % LINHAS 
-			}
-			senao { serpente[CABECA][LINHA] = serpente[CABECA][LINHA] + 1 }
-		}
-		senao se (serpente[CABECA][DIRECAO] == ESQUERDA)
-		{
-			se (cenario_circular)
-			{
-				serpente[CABECA][COLUNA] = (COLUNAS + serpente[CABECA][COLUNA] - 1) % COLUNAS
-			}
-			senao { serpente[CABECA][COLUNA] = serpente[CABECA][COLUNA] - 1 }
-		}
-		senao se (serpente[CABECA][DIRECAO] == DIREITA)
-		{
-			se (cenario_circular)
-			{
-				serpente[CABECA][COLUNA] = (COLUNAS + serpente[CABECA][COLUNA] + 1) % COLUNAS
-			}
-			senao { serpente[CABECA][COLUNA] = serpente[CABECA][COLUNA] + 1 }
-		}
-	}
-
-	funcao ler_entrada_usuario()
-	{		
-		se ((dificuldade != CHUCK_NORRIS e t.tecla_pressionada(t.TECLA_SETA_ACIMA)) ou (dificuldade == CHUCK_NORRIS e t.tecla_pressionada(t.TECLA_SETA_ABAIXO)))
-		{
-			se (serpente[CABECA + 1][DIRECAO] != ABAIXO)
-			{
-				serpente[CABECA][DIRECAO] = ACIMA
-			}
-		}
-		senao se ((dificuldade != CHUCK_NORRIS e t.tecla_pressionada(t.TECLA_SETA_ABAIXO)) ou (dificuldade == CHUCK_NORRIS e t.tecla_pressionada(t.TECLA_SETA_ACIMA)))
-		{
-			se (serpente[CABECA + 1][DIRECAO] != ACIMA)
-			{
-				serpente[CABECA][DIRECAO] = ABAIXO
-			}
-		}
-		senao se ((dificuldade != CHUCK_NORRIS e t.tecla_pressionada(t.TECLA_SETA_ESQUERDA)) ou (dificuldade == CHUCK_NORRIS e t.tecla_pressionada(t.TECLA_SETA_DIREITA)))
-		{
-			se (serpente[CABECA + 1][DIRECAO] != DIREITA)
-			{
-				serpente[CABECA][DIRECAO] = ESQUERDA
-			}
-		}
-		senao se ((dificuldade != CHUCK_NORRIS e t.tecla_pressionada(t.TECLA_SETA_DIREITA)) ou (dificuldade == CHUCK_NORRIS e t.tecla_pressionada(t.TECLA_SETA_ESQUERDA)))
-		{
-			se (serpente[CABECA + 1][DIRECAO] != ESQUERDA)
-			{			
-				serpente[CABECA][DIRECAO] = DIREITA
-			}
-		}
-	}
-
-	funcao atualizar_posicao_segmentos()
-	{
-		ultimo_estado_cauda[LINHA] = serpente[CAUDA][LINHA]
-		ultimo_estado_cauda[COLUNA] = serpente[CAUDA][COLUNA]
-		ultimo_estado_cauda[DIRECAO] = serpente[CAUDA][DIRECAO]
-		
-		para (inteiro SEGMENTO = CAUDA; SEGMENTO > CABECA; SEGMENTO--)
-		{
-			inteiro SEGMENTO_ANTERIOR = SEGMENTO - 1
-			
-			serpente[SEGMENTO][LINHA  ] = serpente[SEGMENTO_ANTERIOR][LINHA  ]
-			serpente[SEGMENTO][COLUNA ] = serpente[SEGMENTO_ANTERIOR][COLUNA ]
-			serpente[SEGMENTO][DIRECAO] = serpente[SEGMENTO_ANTERIOR][DIRECAO]
-		}
-	}
-
-	funcao desenhar_tela_jogo()
-	{
-		desenhar_fundo_cenario()
-		desenhar_pontuacao_serpente()
-		desenhar_tempo_jogo()
-		desenhar_serpente()
-		desenhar_comida()
-		desenhar_fruta_especial()
-		desenhar_borda_cenario()
-	}
-
-	funcao desenhar_fruta_especial()
-	{
-		se (fruta_especial_ativa)
-		{
-			inteiro x = BORDA_CENARIO + (fruta_especial[COLUNA] * tamanho_segmento) + 1
-			inteiro y = ALTURA_PAINEL_PONTUACAO + BORDA_CENARIO + (fruta_especial[LINHA] * tamanho_segmento) + 1
-
-			/* Alterna a cor de fundo entre amarelo (0xFFFF00) e preto (0x000000) a cada 250 milissegundos */
-			se ((u.tempo_decorrido() / 250) % 2 == 0)
-			{
-				g.definir_cor(0xFFFF00)
-			}
-			senao
-			{
-				g.definir_cor(0x000000)
-			}
-
-			g.desenhar_retangulo(x - 2, y - 2, tamanho_segmento + 4, tamanho_segmento + 4, falso, verdadeiro)
-
-			desenhar_objeto(fruta_especial[COLUNA], fruta_especial[LINHA], imagens_frutas_especiais[tipo_fruta_especial])
-		}
-	}
-
-	funcao desenhar_pontuacao_serpente()
-	{
-		inteiro x = BORDA_CENARIO
-		inteiro y = 10
-
-		g.definir_tamanho_texto(16.0)
-		g.definir_cor(tema[COR_TEXTO])
-		g.definir_estilo_texto(falso, falso, falso)
-		
-		cadeia texto_pontos = "Pts: " + pontuacao_jogador
-		
-		se (efeito_ativo == FRUTA_FOGO)
-		{
-			texto_pontos = texto_pontos + " [FOGO 3X: " + duracao_efeito + "]"
-		}
-		senao se (efeito_ativo == FRUTA_GELO)
-		{
-			texto_pontos = texto_pontos + " [GELO SLOW: " + duracao_efeito + "]"
-		}
-		senao se (efeito_ativo == FRUTA_PEDRA)
-		{
-			texto_pontos = texto_pontos + " [PEDRA INVENCÍVEL: " + duracao_efeito + "]"
-		}
-
-		g.desenhar_texto(x, y, texto_pontos)
-	}
-
-	funcao desenhar_tempo_jogo()
-	{
-		cadeia tempo = "Tempo: " + formatar_tempo(tempo_total_jogo)
-
-		g.definir_tamanho_texto(16.0)
-		g.definir_cor(tema[COR_TEXTO])
-		g.definir_estilo_texto(falso, verdadeiro, falso)
-		
-		inteiro x = largura_tela - BORDA_CENARIO - g.largura_texto(tempo)
-		inteiro y = 10
-		
-		g.desenhar_texto(x, y, tempo)
-	}
-
-	funcao cadeia formatar_tempo(inteiro tempo)
-	{
-		inteiro segundos = (tempo / 1000 ) % 60
-		inteiro minutos  = (tempo / 60000)
-		
-		cadeia min = txt.preencher_a_esquerda('0', 2, "" + minutos )
-		cadeia seg = txt.preencher_a_esquerda('0', 2, "" + segundos)
-
-		retorne min + ":" + seg
-	}
-	
-	funcao desenhar_fundo_cenario()
-	{
-		g.definir_cor(tema[COR_FUNDO])
-		g.limpar()		
-	}
-
-	funcao desenhar_borda_cenario()
-	{
-		inteiro x1 = BORDA_CENARIO - 1
-		inteiro y1 = BORDA_CENARIO + ALTURA_PAINEL_PONTUACAO - 1
-		inteiro x2 = largura_tela - BORDA_CENARIO - 1		
-		inteiro y2 = altura_tela  - BORDA_CENARIO  - 1
-		
-		g.definir_cor(tema[COR_BORDA])
-		
-		g.desenhar_linha(x1, y1, x2, y1)
-		g.desenhar_linha(x1, y2, x2, y2)
-		g.desenhar_linha(x1, y1, x1, y2)
-		g.desenhar_linha(x2, y1, x2, y2)
-	}
-
-	funcao desenhar_serpente()
-	{
-		desenhar_objeto(serpente[CABECA][COLUNA], serpente[CABECA][LINHA], imagem_segmento)
-		
-		para (inteiro SEGMENTO = 1; SEGMENTO <= CAUDA; SEGMENTO++)
-		{
-			desenhar_objeto(serpente[SEGMENTO][COLUNA], serpente[SEGMENTO][LINHA], imagem_segmento)
-		}
-
-		desenhar_objeto(serpente[CAUDA][COLUNA], serpente[CAUDA][LINHA], imagem_segmento)
-	}
-
-	funcao desenhar_objeto(inteiro coluna, inteiro linha, inteiro imagem)
-	{
-		inteiro x = BORDA_CENARIO + (coluna * tamanho_segmento) + 1
-		inteiro y = ALTURA_PAINEL_PONTUACAO + BORDA_CENARIO + (linha * tamanho_segmento) + 1
-
-		g.desenhar_imagem(x, y, imagem)
-	}
-
-	funcao desenhar_comida()
-	{
-		desenhar_objeto(comida[COLUNA], comida[LINHA], imagem_comida)
-	}
-	
-	funcao finalizar_serpente()
-	{
-		liberar_sons()
-		liberar_imagens()
-		g.encerrar_modo_grafico()
-	}
-
-	funcao liberar_imagens()
-	{
-		g.liberar_imagem(imagem_segmento)
-		g.liberar_imagem(imagem_comida)
-
-		para (inteiro i = 0; i < 5; i++)
-		{
-			g.liberar_imagem(imagens_frutas_especiais[i])
-		}
-	}
-
-	funcao liberar_sons()
-	{
-		sm.liberar_som(musica_jogo_serpente)
-		sm.liberar_som(musica_menu_serpente)
-		sm.liberar_som(som_comida)
-		sm.liberar_som(som_derrota)
-	}
 	
 
 	// CONFIGURAÇÃO DO JOGO
@@ -2357,19 +461,220 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 	inteiro estado_jogo = ESTADO_MENU
 	real deslocamento_estrada = 0.0
 	
+	// =============================================================
+	// MODO CORRIDA 3D (pseudo-3D desenhado em 2D)  -  NOVO
+	// -------------------------------------------------------------
+	// Técnica: cada linha de 5 px da tela corresponde a uma distância
+	// no mundo (d = DIST_K / k). A pista é desenhada linha a linha,
+	// as curvas deslocam as linhas distantes e os objetos usam
+	// imagens pré-escaladas (spr_*.png), escolhidas pela distância.
+	// Tela dividida: P1 à esquerda (0..399), P2 à direita (400..799).
+	// =============================================================
+
+	const inteiro ESTADO_3D = 5
+
+	const inteiro VISTA_W = 400
+	const inteiro HORIZONTE = 250
+	const inteiro FAIXA_PX = 5
+	const inteiro NUM_FAIXAS = 70
+	const real DIST_K = 350.0
+	const real HW_BASE = 214.0
+	const real RW_MUNDO = 6.0
+	const inteiro K_CARRO = 62
+	const real Z_CARRO = 5.65
+	const real TAM_SEG = 40.0
+	const real TAM_BANDA = 8.0
+	const real TAM_TRACO = 4.0
+	const inteiro N_SEG_PISTA = 20
+	const inteiro CICLO_MS = 120000
+	const real DIST_CHECKPOINT = 700.0
+	const inteiro N_CARROS_COR = 8
+
+	// Tipos de sprite (índice em img_sp / SP_CW / SP_CH)
+	const inteiro T_PINHEIRO = 0
+	const inteiro T_PEDRA = 1
+	const inteiro T_PLACA = 2
+	const inteiro T_OUTDOOR = 3
+	const inteiro T_POSTE = 4
+	const inteiro T_CONE = 5
+	const inteiro T_ESTRELA = 6
+	const inteiro T_GALAO = 7
+	const inteiro T_PLATEIA = 8
+	const inteiro T_ARBUSTO = 9
+	const inteiro T_TENDA = 10
+	const inteiro T_CARRO = 11
+	const inteiro T_ARCO = 12
+
+	// Tamanho de cada célula (um quadro de escala) dentro das folhas de sprites
+	// Folhas compactas: cada quadro de escala tem largura própria (SP_FW) e posição (SP_FX); SP_CH = altura de cada linha
+	inteiro SP_CH[13] = {185, 67, 146, 162, 177, 65, 100, 107, 76, 54, 177, 73, 0}
+	inteiro SP_FX[][] = {
+		{0, 7, 15, 24, 34, 46, 60, 77, 98, 123, 154, 193, 241, 302, 379},
+		{0, 7, 14, 22, 31, 42, 55, 70, 88, 110, 137, 170, 211, 263, 328},
+		{0, 6, 13, 21, 29, 39, 50, 63, 78, 96, 118, 145, 179, 221, 274},
+		{0, 9, 20, 33, 48, 66, 88, 114, 147, 188, 239, 303, 384, 487, 619},
+		{0, 7, 14, 22, 31, 42, 55, 70, 88, 110, 137, 170, 211, 263, 328},
+		{0, 6, 12, 19, 26, 34, 43, 54, 67, 82, 100, 122, 148, 181, 222},
+		{0, 7, 14, 22, 31, 41, 53, 67, 84, 104, 128, 158, 195, 242, 301},
+		{0, 7, 14, 22, 31, 41, 53, 67, 84, 104, 128, 158, 195, 242, 301},
+		{0, 8, 17, 28, 40, 55, 72, 93, 119, 151, 191, 241, 304, 384, 485},
+		{0, 7, 14, 22, 31, 41, 53, 67, 84, 104, 128, 158, 195, 242, 301},
+		{0, 9, 19, 31, 45, 61, 81, 105, 135, 172, 219, 278, 352, 446, 565},
+		{0, 7, 15, 24, 35, 47, 62, 79, 100, 126, 158, 198, 248, 311, 391},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	}
+	inteiro SP_FW[][] = {
+		{7, 8, 9, 10, 12, 14, 17, 21, 25, 31, 39, 48, 61, 77, 98},
+		{7, 7, 8, 9, 11, 13, 15, 18, 22, 27, 33, 41, 52, 65, 82},
+		{6, 7, 8, 8, 10, 11, 13, 15, 18, 22, 27, 34, 42, 53, 67},
+		{9, 11, 13, 15, 18, 22, 26, 33, 41, 51, 64, 81, 103, 132, 168},
+		{7, 7, 8, 9, 11, 13, 15, 18, 22, 27, 33, 41, 52, 65, 82},
+		{6, 6, 7, 7, 8, 9, 11, 13, 15, 18, 22, 26, 33, 41, 51},
+		{7, 7, 8, 9, 10, 12, 14, 17, 20, 24, 30, 37, 47, 59, 75},
+		{7, 7, 8, 9, 10, 12, 14, 17, 20, 24, 30, 37, 47, 59, 75},
+		{8, 9, 11, 12, 15, 17, 21, 26, 32, 40, 50, 63, 80, 101, 129},
+		{7, 7, 8, 9, 10, 12, 14, 17, 20, 24, 30, 37, 47, 59, 75},
+		{9, 10, 12, 14, 16, 20, 24, 30, 37, 47, 59, 74, 94, 119, 152},
+		{7, 8, 9, 11, 12, 15, 17, 21, 26, 32, 40, 50, 63, 80, 101},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	}
+	inteiro img_sp[13]
+
+	// Qual quadro de escala usar para cada linha k da tela (-1 = longe demais)
+	inteiro FRAME_K[71] = {-1, -1, 0, 2, 3, 4, 5, 5, 6, 6, 7, 7, 7, 8, 8, 8, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 13, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14}
+	real ESCALA_FR[16] = {0.03, 0.0386, 0.0496, 0.0638, 0.082, 0.1054, 0.1355, 0.1742, 0.2239, 0.2879, 0.3701, 0.4758, 0.6118, 0.7865, 1.0112, 1.3}
+
+	// Curvatura da pista (valor - 10, em milésimos). A pista se repete a cada 20 trechos.
+	inteiro CURVAS_PISTA[20] = {10, 10, 12, 14, 14, 12, 10, 7, 5, 5, 8, 10, 10, 13, 16, 13, 10, 6, 6, 10}
+
+	// Ponteiro do velocímetro (valor + 50): 33 posições
+	inteiro AGULHA_DX[33] = {19, 15, 11, 9, 7, 6, 6, 7, 9, 12, 16, 20, 26, 31, 37, 44, 50, 56, 63, 69, 74, 80, 84, 88, 91, 93, 94, 94, 93, 91, 89, 85, 81}
+	inteiro AGULHA_DY[33] = {81, 76, 71, 65, 59, 52, 46, 39, 33, 27, 22, 17, 13, 10, 8, 6, 6, 6, 8, 10, 13, 17, 22, 27, 33, 39, 46, 52, 59, 65, 71, 76, 81}
+
+	// Imagens do modo 3D
+	inteiro img_ceu[24]
+	const inteiro N_CEU = 11
+	inteiro CEU_MAP[24] = {0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 5, 6, 6, 6, 6, 6, 6, 6, 6, 7, 8, 9, 10}
+	inteiro img_montanhas = -1
+	inteiro img_nuv_dia = -1
+	inteiro img_nuv_tarde = -1
+	inteiro img_nuv_noite = -1
+	inteiro img_chuva = -1
+	inteiro img_balao = -1
+	inteiro img_ovni = -1
+	inteiro img_hud_icones = -1
+	inteiro img_painel_vel = -1
+	inteiro img_semaforo = -1
+	inteiro img_fundo_menu_3d = -1
+
+	// Cores
+	inteiro cor_grama_c = 0, cor_grama_e = 0, cor_rumb_v = 0, cor_rumb_b = 0
+	inteiro cor_asf_a = 0, cor_asf_b = 0, cor_faixa = 0, cor_noite = 0
+	inteiro cor_tarde = 0, cor_farol = 0, cor_poeira = 0, cor_chuva = 0
+	inteiro cor_poste_arco = 0, cor_freio = 0
+
+	// Estado da corrida (índice 0 = P1, 1 = P2)
+	real pos3d[2]
+	real xp3d[2]
+	inteiro invul3d[2]
+	inteiro shake3d[2]
+	real prox_cp[2]
+	inteiro cp_count[2]
+	inteiro cp_banner[2]
+	real mont_off[2]
+	logico freando3d[2]
+	real nuv_off = 0.0
+
+	// Objetos dinâmicos de cada jogador
+	real riv_z[2][5]
+	real riv_x[2][5]
+	real riv_v[2][5]
+	inteiro riv_cor[2][5]
+	real cone_z[2][4]
+	real cone_x[2][4]
+	real est_z[2][3]
+	real est_x[2][3]
+	real gal_z[2][2]
+	real gal_x[2][2]
+	real LANE_C[4]
+
+	// Relógio, clima e ciclo dia/noite
+	inteiro t_largada_ms = 0
+	inteiro inicio_corrida_ms = 0
+	inteiro tempo_corrida_ms = 0
+	logico corrida_3d_ativa = falso
+	inteiro frames3d = 0
+	inteiro bob3d = 0
+	real fase_dia = 0.0
+	real w_dia = 1.0
+	real w_noite = 0.0
+	inteiro idx_ceu = 0
+	logico chuva3d = falso
+	inteiro chuva_nivel = 0
+
+	// Lista de objetos visíveis na vista atual (ordenada do mais longe para o mais perto)
+	real dl_z[90]
+	real dl_x[90]
+	inteiro dl_tipo[90]
+	inteiro dl_var[90]
+	inteiro dl_ord[90]
+	inteiro dl_n = 0
+	real cx3d[71]
+
+	// Brilhos dos postes de luz (noite)
+	inteiro glow_n = 0
+	inteiro glow_x[8]
+	inteiro glow_y[8]
+	inteiro glow_r[8]
+
+
+	// =============================================================
+	// INTERFACE NOVA (HUD, menu, skins, melhorias, tela de derrota)
+	// =============================================================
+	inteiro img_ui_ic = -1
+	inteiro img_ui_icg = -1
+	inteiro img_trofeu = -1
+	inteiro img_podio = -1
+	inteiro img_go_bg = -1
+	inteiro img_menu_vig = -1
+	inteiro img_jogo_vig = -1
+	inteiro img_xadrez = -1
+	inteiro img_brilho = -1
+	inteiro img_fumaca = -1
+
+	inteiro cor_pn_fundo = 0, cor_pn_borda = 0, cor_ouro = 0, cor_ok = 0
+	inteiro cor_ruim = 0, cor_texto_fraco = 0, cor_azul_p1 = 0, cor_laranja_p2 = 0
+	inteiro cor_divisoria = 0
+
+	inteiro tempo_ui = 0
+	inteiro estado_anterior_ui = -1
+	inteiro t_estado_ms = 0
+	inteiro inicio_2d_ms = 0
+	inteiro modo_ultima_corrida = 0
+	inteiro vidas_ant[2]
+	inteiro flash_dano[2]
+	real recorde_dist = 0.0
+	logico novo_recorde_p1 = falso
+	logico novo_recorde_p2 = falso
+	cadeia NOMES_SKINS[24]
+	
 	// VARIÁVEIS DE MENU E ÁUDIO
 	inteiro opcao_menu = 0 
 	inteiro cooldown_tecla = 0
 	inteiro cooldown_freio = 0
 	logico musica_menu_tocando = falso
 	logico musica_jogo_tocando = falso
+	inteiro canal_musica_menu_corrida = -1
+	inteiro canal_musica_jogo_corrida = -1
+	inteiro canal_trafego_corrida = -1
+	logico banco_skins_iniciado = falso
 
 	// -------------------------------------------------------------
 	// Função do Jogo de Pong 
 	// -------------------------------------------------------------
 	
 	
-	funcao executar_jogo_pong()
+		funcao executar_jogo_pong()
 	{
 		// Carrega as imagens se ainda não foram carregadas
 		se (img_batedor1 == -1) img_batedor1 = g.carregar_imagem("pong/Rebatedores/Rebatedor_Azul.png")
@@ -2390,15 +695,9 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		
 		inicializar()
 
-		se (imagem_fundo_menu_pong == -1)
-		{
-			imagem_fundo_menu_pong = g.carregar_imagem("pong/Fundos_e_Bola/fundo_menu_pong.png")
-			g.liberar_imagem(botao_habilidade1)
-			g.liberar_imagem(botao_habilidade2)
-			g.redimensionar_imagem(botao_habilidade1, 100, 50, falso)
-			g.redimensionar_imagem(botao_habilidade2, 100, 50, falso)
-			g.redimensionar_imagem(imagem_fundo_menu_pong, tela_w, tela_h, falso)
-		}
+		// Fundo do menu ocupando a tela toda (tela_w/tela_h só são conhecidos após inicializar())
+		se (imagem_fundo_menu_pong != -1)
+			imagem_fundo_menu_pong = ajustar_imagem(imagem_fundo_menu_pong, tela_w, tela_h)
 		
 		estado_pong = MENU_PONG
 		opcao_menu_pong = 0
@@ -2408,6 +707,8 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		
 		enquanto (estado_pong != SAIR_PONG)
 		{
+			inteiro estado_anterior = estado_pong
+
 			escolha (estado_pong)
 			{
 				caso MENU_PONG:
@@ -2425,7 +726,12 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 					pare
 			}
 			
-			g.renderizar()
+			// Se a tela mudou nesta volta (ex.: Menu -> Jogo), o buffer ainda tem o desenho
+			// da tela anterior; apresentá-lo causava um "flash". A próxima volta já desenha certo.
+			se (estado_pong == estado_anterior)
+			{
+				g.renderizar()
+			}
 			u.aguarde(16)
 		}
 		
@@ -2434,12 +740,56 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 			sm.interromper_som(canal_lobby)
 			canal_lobby = -1
 		}
+		se (canal_jogo != -1)
+		{
+			sm.interromper_som(canal_jogo)
+			canal_jogo = -1
+		}
+
+		// Devolve a memória de tudo que o Pong carregou
+		liberar_recursos_pong()
 
 		g.sair_modo_tela_cheia()
 		g.definir_dimensoes_janela(785, 1024)
 		g.definir_fonte_texto("Poetsen One")
 		g.definir_titulo_janela("Menu de Opções")
 		m.exibir_cursor()
+	}
+
+	funcao inteiro liberar_imagem_pong(inteiro imagem)
+	{
+		se (imagem != -1) g.liberar_imagem(imagem)
+		retorne -1
+	}
+
+	funcao inteiro liberar_som_pong(inteiro som)
+	{
+		se (som != -1) sm.liberar_som(som)
+		retorne -1
+	}
+
+	// Libera todas as imagens e sons do Pong. Sem isso, cada vez que o jogo era aberto
+	// tudo era carregado de novo e a versão anterior ficava presa na memória.
+	funcao liberar_recursos_pong()
+	{
+		img_batedor1 = liberar_imagem_pong(img_batedor1)
+		img_batedor1_meio = liberar_imagem_pong(img_batedor1_meio)
+		img_batedor1_fim = liberar_imagem_pong(img_batedor1_fim)
+		img_batedor2 = liberar_imagem_pong(img_batedor2)
+		img_batedor2_meio = liberar_imagem_pong(img_batedor2_meio)
+		img_batedor2_fim = liberar_imagem_pong(img_batedor2_fim)
+		bola_beisebol = liberar_imagem_pong(bola_beisebol)
+
+		imagem_fundo_menu_pong = liberar_imagem_pong(imagem_fundo_menu_pong)
+		imagem_fundo_pong = liberar_imagem_pong(imagem_fundo_pong)
+		portugol = liberar_imagem_pong(portugol)
+		botao_habilidade1 = liberar_imagem_pong(botao_habilidade1)
+		botao_habilidade2 = liberar_imagem_pong(botao_habilidade2)
+		imagem_pausa = liberar_imagem_pong(imagem_pausa)
+
+		som_lobby = liberar_som_pong(som_lobby)
+		som_jogo = liberar_som_pong(som_jogo)
+		colision_music = liberar_som_pong(colision_music)
 	}
 
 	funcao resetar_bolinha()
@@ -2502,36 +852,79 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		desenhar_fundo()
 	}
 
+	// A pontuação é desenhada a cada quadro por desenhar_pontuacao(). Esta função antes
+	// pintava a tela inteira de preto no buffer e gerava uma imagem que nunca era usada,
+	// o que causava um quadro piscando ao iniciar a partida e a cada ponto.
 	funcao reset_pontuacao()
 	{
-		g.definir_cor(cor_fundo)
-		g.desenhar_retangulo(0, 0, tela_w, tela_h, falso, verdadeiro)
-		g.definir_cor(cor_principal)
-		desenhar_pontuacao()
-		se (pontuacao_img != -1) g.liberar_imagem(pontuacao_img)
-		pontuacao_img = g.renderizar_imagem(tela_w, tela_h/12)
 	}
 
+	// Antes esta função gerava 4 imagens (uma do tamanho da tela inteira) que nunca eram
+	// desenhadas e nunca eram liberadas: ~1 tela de RAM perdida a cada entrada no Pong.
 	funcao gerar_imagens()
 	{
 		gerar_fundo()
-		campo[IMAGEM] = g.renderizar_imagem(tela_w, tela_h)
-		g.desenhar_retangulo(0, 0, tela_w, tela_h, falso, verdadeiro)
-		player1[IMAGEM] = g.renderizar_imagem(player1[LARGURIA], player1[ARTURIA])
-		g.desenhar_retangulo(0, 0, tela_w, tela_h, falso, verdadeiro)
-		player2[IMAGEM] = g.renderizar_imagem(player2[LARGURIA], player2[ARTURIA])
-		g.desenhar_retangulo(0, 0, tela_w, tela_h, falso, verdadeiro)
-		bolinha[IMAGEM] = g.renderizar_imagem(bolinha[LARGURIA], bolinha[ARTURIA])
 		reset_pontuacao()
+	}
+
+	// redimensionar_imagem() NÃO altera a imagem original: ela devolve o endereço de uma
+	// NOVA imagem. Por isso o retorno precisa ser guardado (antes era descartado e os
+	// sprites continuavam no tamanho original, diferente da hitbox).
+	funcao inteiro ajustar_imagem(inteiro imagem, inteiro largura, inteiro altura)
+	{
+		se (imagem == -1) retorne -1
+		inteiro nova_imagem = g.redimensionar_imagem(imagem, largura, altura, falso)
+		se (nova_imagem != imagem) g.liberar_imagem(imagem)
+		retorne nova_imagem
+	}
+
+	// Largura que mantém a proporção do sprite para a altura desejada
+	funcao inteiro largura_proporcional(inteiro imagem, inteiro altura_alvo)
+	{
+		se (imagem == -1) retorne tamanho_tile
+		inteiro altura_original = g.altura_imagem(imagem)
+		se (altura_original <= 0) retorne tamanho_tile
+		inteiro nova_largura = g.largura_imagem(imagem) * altura_alvo / altura_original
+		se (nova_largura < 1) nova_largura = 1
+		retorne nova_largura
+	}
+
+	funcao ajustar_sprites_jogadores()
+	{
+		inteiro altura = tamanho_tile * ALTURA_JOGADOR_TILES
+		inteiro largura1 = largura_proporcional(img_batedor1, altura)
+		inteiro largura2 = largura_proporcional(img_batedor2, altura)
+
+		img_batedor1 = ajustar_imagem(img_batedor1, largura1, altura)
+		img_batedor1_meio = ajustar_imagem(img_batedor1_meio, largura1, altura)
+		img_batedor1_fim = ajustar_imagem(img_batedor1_fim, largura1, altura)
+
+		img_batedor2 = ajustar_imagem(img_batedor2, largura2, altura)
+		img_batedor2_meio = ajustar_imagem(img_batedor2_meio, largura2, altura)
+		img_batedor2_fim = ajustar_imagem(img_batedor2_fim, largura2, altura)
+
+		// A bolinha usa tamanho_tile como hitbox (ver resetar_bolinha)
+		bola_beisebol = ajustar_imagem(bola_beisebol, tamanho_tile, tamanho_tile)
+
+		player1[LARGURIA] = largura1
+		player1[ARTURIA] = altura
+		player2[LARGURIA] = largura2
+		player2[ARTURIA] = altura
 	}
 
 	funcao inicializar()
 	{
 		g.iniciar_modo_grafico(verdadeiro)
 		g.entrar_modo_tela_cheia()
+		// Dá tempo da janela terminar a troca para tela cheia antes de desenhar
+		u.aguarde(300)
 		m.ocultar_cursor()
 		
-		g.carregar_fonte("pong/PressStart2P.ttf")
+		se (nao fonte_pong_carregada)
+		{
+			g.carregar_fonte("pong/PressStart2P.ttf")
+			fonte_pong_carregada = verdadeiro
+		}
 		g.definir_fonte_texto("Press Start 2P")
 		g.definir_cor(g.COR_PRETO)
 		g.limpar()
@@ -2546,13 +939,13 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		g.desenhar_texto(x, y, text)
 		g.renderizar()
 
-		portugol = g.carregar_imagem("pong/portugol.png")
-		imagem_fundo_pong = g.carregar_imagem("pong/Fundos_e_Bola/campo.png")
+		se (portugol == -1) portugol = g.carregar_imagem("pong/portugol.png")
+		se (imagem_fundo_pong == -1) imagem_fundo_pong = g.carregar_imagem("pong/Fundos_e_Bola/campo.png")
 		
 		branco = g.COR_BRANCO
 		verde = g.criar_cor(52, 229, 0)
 		
-		colision_music = sm.carregar_som("pong/Sons/colision.wav")
+		se (colision_music == -1) colision_music = sm.carregar_som("pong/Sons/colision.wav")
 		sm.definir_volume(100)
 
 		cor_fundo = g.COR_PRETO
@@ -2569,27 +962,18 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		pontuacao1_x = campo[X]
 		pontuacao2_x = campo[X] + campo[LARGURIA] - tamanho_tile*2
 
+		// Redimensiona os sprites e define LARGURIA/ARTURIA dos jogadores a partir deles,
+		// assim a hitbox é exatamente do tamanho do personagem desenhado
+		ajustar_sprites_jogadores()
+
 		player1[X] = campo[X]
-		player1[ARTURIA] = tamanho_tile*4
-		player1[LARGURIA] = tamanho_tile
-		player1[Y] = campo[Y] + (campo[ARTURIA]/2)
+		player1[Y] = campo[Y] + (campo[ARTURIA]/2) - (player1[ARTURIA]/2)
 		player1[PONTUACAO_PONG] = 0
 
-		player2[X] = campo[X] + campo[LARGURIA] - tamanho_tile-100
-		player2[ARTURIA] = tamanho_tile*4
-		player2[LARGURIA] = tamanho_tile
-		player2[Y] = campo[Y] + (campo[ARTURIA]/2)
+		// Encostado na borda direita do campo (simétrico ao jogador 1)
+		player2[X] = campo[X] + campo[LARGURIA] - player2[LARGURIA]
+		player2[Y] = campo[Y] + (campo[ARTURIA]/2) - (player2[ARTURIA]/2)
 		player2[PONTUACAO_PONG] = 0
-
-		se (img_batedor1 != -1) g.redimensionar_imagem(img_batedor1, player1[LARGURIA], player1[ARTURIA], falso)
-		se (img_batedor1_meio != -1) g.redimensionar_imagem(img_batedor1_meio, player1[LARGURIA], player1[ARTURIA], falso)
-		se (img_batedor1_fim != -1) g.redimensionar_imagem(img_batedor1_fim, player1[LARGURIA], player1[ARTURIA], falso)
-		
-		se (img_batedor2 != -1) g.redimensionar_imagem(img_batedor2, player2[LARGURIA], player2[ARTURIA], falso)
-		se (img_batedor2_meio != -1) g.redimensionar_imagem(img_batedor2_meio, player2[LARGURIA], player2[ARTURIA], falso)
-		se (img_batedor2_fim != -1) g.redimensionar_imagem(img_batedor2_fim, player2[LARGURIA], player2[ARTURIA], falso)
-		
-		se (bola_beisebol != -1) g.redimensionar_imagem(bola_beisebol, 40, 40, falso)
 		
 		passo = 5
 		resetar_bolinha()
@@ -2609,8 +993,8 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		gerar_imagens()
 		u.aguarde(1000)
 
-		botao_habilidade1 = g.carregar_imagem("pong/Habilidades/Habilidade_Reb1.png")
-		botao_habilidade2 = g.carregar_imagem("pong/Habilidades/Habilidade_Reb2.png")
+		se (botao_habilidade1 == -1) botao_habilidade1 = g.carregar_imagem("pong/Habilidades/Habilidade_Reb1.png")
+		se (botao_habilidade2 == -1) botao_habilidade2 = g.carregar_imagem("pong/Habilidades/Habilidade_Reb2.png")
 
 		botao1_larg = g.largura_imagem(botao_habilidade1)
 		botao1_alt  = g.altura_imagem(botao_habilidade1)
@@ -2774,7 +1158,7 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		// Barras de força
 		g.definir_cor(verde)
 		g.desenhar_retangulo(player1[X], player1[Y], forca1*13, 10, falso, verdadeiro)
-		g.desenhar_retangulo(player2[X]+75 - forca2*8, player2[Y]-15, forca2*13, 10, falso, verdadeiro)
+		g.desenhar_retangulo(player2[X] + player2[LARGURIA] - forca2*13, player2[Y]-15, forca2*13, 10, falso, verdadeiro)
 		
 		se (botao_habilidade1 != -1) {
 			g.desenhar_imagem(botao1_x, botao1_y, botao_habilidade1)
@@ -2969,6 +1353,7 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		{
 			pausado = verdadeiro
 			desenhar()
+			imagem_pausa = liberar_imagem_pong(imagem_pausa)
 			imagem_pausa = g.renderizar_imagem(tela_w, tela_h)
 			enquanto (t.tecla_pressionada(t.TECLA_P)) { }
 		}
@@ -2993,6 +1378,8 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 				enquanto (t.tecla_pressionada(t.TECLA_P)) { }
 			}
 		}
+		// Saiu da pausa: a captura da tela não é mais necessária
+		imagem_pausa = liberar_imagem_pong(imagem_pausa)
 	}
 
 	// ========== FUNÇÕES DE HABILIDADES ATIVAS ==========
@@ -3116,15 +1503,23 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 	}
 	// =================================================
  
+	// Espera soltar ENTER/ESC para a mesma tecla não ser lida duas vezes
+	// (ex.: ENTER do menu virando "carregar força" do jogador 2, ou voltando do Upgrades na hora)
+	funcao aguardar_soltar_enter_esc()
+	{
+		enquanto (t.tecla_pressionada(t.TECLA_ENTER) ou t.tecla_pressionada(t.TECLA_ESC))
+		{
+			u.aguarde(10)
+		}
+	}
+
 	funcao desenhar_menu_pong()
 	{
+		// Sempre limpa antes: sem isso sobravam pedaços do quadro anterior (piscando)
+		g.definir_cor(g.COR_PRETO)
+		g.limpar()
 		se (imagem_fundo_menu_pong != -1)
 			g.desenhar_imagem(0, 0, imagem_fundo_menu_pong)
-		senao
-		{
-			g.definir_cor(g.COR_PRETO)
-			g.limpar()
-		}
 		
 		g.definir_cor(g.COR_BRANCO)
 		g.definir_tamanho_texto(40.0)
@@ -3193,6 +1588,7 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 				estado_pong = UPGRADES_PONG
 			}
 			u.aguarde(200)
+			aguardar_soltar_enter_esc()
 		}
 		senao se (t.tecla_pressionada(t.TECLA_ESC))
 		{
@@ -3208,7 +1604,7 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 
 		g.definir_cor(g.COR_AMARELO)
 		g.definir_tamanho_texto(36.0)
-		cadeia titulo = "MELHORIAS (UPGRADES)"
+		cadeia titulo = "HABILIDADES (UPGRADES)"
 		inteiro x_titulo = tela_w / 2 - g.largura_texto(titulo) / 2
 		g.desenhar_texto(x_titulo, 50, titulo)
 
@@ -3226,6 +1622,19 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		g.definir_cor(g.COR_AMARELO)
 		g.desenhar_texto(x_coluna2, 160, "Banco: " + strikecoins_p2 + " Strikecoins")
 
+		g.definir_cor(0xCCCCCC)
+		g.desenhar_texto(x_coluna1, 590, "*Rebatida Aleatória: Rebatidas param de seguir um Padrão")
+		
+		g.definir_cor(0xCCCCCC)
+		g.desenhar_texto(x_coluna1, 620, "*Aumento de Velocidade: Aumenta a Velocidade do seu Personagem")
+		
+		g.definir_cor(0xCCCCCC)
+		g.desenhar_texto(x_coluna1, 650, "*Confusão: Inverte o Controle do seu Oponente")
+		g.definir_cor(0xCCCCCC)
+		
+		g.desenhar_texto(x_coluna1, 680, "*Congelamento: Diminui a Velocidade do seu Oponente")
+		
+
 		inteiro y_base = 230
 		inteiro espacamento_y = 75
 
@@ -3242,10 +1651,13 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 			cadeia item_p1
 			se (i == 0) // Rebatida Aleatória (passiva)
 			{
-				item_p1 = (i+1) + ". " + nomes_upgrades[i] + " (Nvl: " + lvl_upg_p1[i] + "/1)"
+				item_p1 = (i+1) + ". " + nomes_upgrades[i] + " (Nvl: " + lvl_upg_p1[i] + "/" + NIVEL_MAX_REBATIDA + ")"
 				g.desenhar_texto(x_coluna1, y_pos, item_p1)
 				g.definir_cor(g.COR_VERMELHO)
-				g.desenhar_texto(x_coluna1, y_pos + 25, "Custo: " + custo_upg[i] + " Strikecoins")
+				se (lvl_upg_p1[i] >= NIVEL_MAX_REBATIDA)
+					g.desenhar_texto(x_coluna1, y_pos + 25, "Já comprada")
+				senao
+					g.desenhar_texto(x_coluna1, y_pos + 25, "Custo: " + custo_upg[i] + " Strikecoins")
 			}
 			senao // Habilidades ativas (1,2,3)
 			{
@@ -3270,10 +1682,13 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 			cadeia item_p2
 			se (i == 0)
 			{
-				item_p2 = (i+1) + ". " + nomes_upgrades[i] + " (Nvl: " + lvl_upg_p2[i] + "/1)"
+				item_p2 = (i+1) + ". " + nomes_upgrades[i] + " (Nvl: " + lvl_upg_p2[i] + "/" + NIVEL_MAX_REBATIDA + ")"
 				g.desenhar_texto(x_coluna2, y_pos, item_p2)
 				g.definir_cor(g.COR_VERMELHO)
-				g.desenhar_texto(x_coluna2, y_pos + 25, "Custo: " + custo_upg[i] + " Strikecoins")
+				se (lvl_upg_p2[i] >= NIVEL_MAX_REBATIDA)
+					g.desenhar_texto(x_coluna2, y_pos + 25, "Já comprada")
+				senao
+					g.desenhar_texto(x_coluna2, y_pos + 25, "Custo: " + custo_upg[i] + " Strikecoins")
 			}
 			senao
 			{
@@ -3330,9 +1745,9 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
                 habilidade_ativa_p1 = i
             }
         }
-        senao se (i == 0) // Rebatida Aleatória (passiva) – compra níveis até o máximo (5)
+        senao se (i == 0) // Rebatida Aleatória (passiva) – só até NIVEL_MAX_REBATIDA
         {
-            se (lvl_upg_p1[0] < 5 e strikecoins_p1 >= custo_upg[0])
+            se (lvl_upg_p1[0] < NIVEL_MAX_REBATIDA e strikecoins_p1 >= custo_upg[0])
             {
                 strikecoins_p1 = strikecoins_p1 - custo_upg[0]
                 lvl_upg_p1[0] = lvl_upg_p1[0] + 1
@@ -3372,7 +1787,7 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
         }
         senao se (i == 0)
         {
-            se (lvl_upg_p2[0] < 5 e strikecoins_p2 >= custo_upg[0])
+            se (lvl_upg_p2[0] < NIVEL_MAX_REBATIDA e strikecoins_p2 >= custo_upg[0])
             {
                 strikecoins_p2 = strikecoins_p2 - custo_upg[0]
                 lvl_upg_p2[0] = lvl_upg_p2[0] + 1
@@ -3386,6 +1801,7 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
     {
         estado_pong = MENU_PONG
         u.aguarde(200)
+        aguardar_soltar_enter_esc()
     }
 }
 
@@ -3485,7 +1901,6 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		pontuar()
 		atalhos()
 	}
- 
 
 	// -------------------------------------------------------------
 	// Funções do Jogo de Corrida
@@ -3493,8 +1908,24 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 
 	funcao executar_jogo_corrida()
 	{
-		inicializar_banco_skins()
+		// As skins só são zeradas na primeira vez que o jogo é aberto; assim as compras
+		// feitas com as estrelas continuam valendo se o jogador voltar ao menu e reabrir.
+		se (nao banco_skins_iniciado)
+		{
+			inicializar_banco_skins()
+			banco_skins_iniciado = verdadeiro
+		}
 		inicializar_jogo()
+
+		// Estado limpo a cada abertura
+		estado_jogo = ESTADO_MENU
+		estado_anterior_ui = -1
+		cooldown_tecla = 0
+		musica_menu_tocando = falso
+		musica_jogo_tocando = falso
+		canal_musica_menu_corrida = -1
+		canal_musica_jogo_corrida = -1
+		canal_trafego_corrida = -1
 
 		sm.reproduzir_som(som_ligar, falso)
 
@@ -3502,7 +1933,29 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		{
 			se (estado_jogo == ESTADO_MENU e t.tecla_pressionada(t.TECLA_ESC)){
 				parar_todas_musicas()
+				liberar_recursos_corrida()
 				retorne
+			}
+
+			// ESC durante a corrida 3D volta para o menu da corrida
+			se (estado_jogo == ESTADO_3D e t.tecla_pressionada(t.TECLA_ESC)){
+				parar_todas_musicas()
+				estado_jogo = ESTADO_MENU
+				enquanto (t.tecla_pressionada(t.TECLA_ESC))
+				{
+					u.aguarde(20)
+				}
+				cooldown_tecla = 20
+			}
+			tempo_ui = tempo_ui + 1
+			se (estado_jogo != estado_anterior_ui)
+			{
+				estado_anterior_ui = estado_jogo
+				t_estado_ms = u.tempo_decorrido()
+				se (estado_jogo == ESTADO_GAME_OVER)
+				{
+					registrar_resultado()
+				}
 			}
 			limpar_tela()
 
@@ -3535,6 +1988,12 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 					desenhar_jogo()
 					pare
 
+				caso ESTADO_3D:
+					gerenciar_musica_jogo()
+					atualizar_jogo_3d()
+					desenhar_jogo_3d()
+					pare
+
 				caso ESTADO_GAME_OVER:
 					parar_todas_musicas()
 					desenhar_game_over()
@@ -3547,12 +2006,39 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		}
 	}
 
+
+	// Libera tudo o que a corrida carregou. Sem isso, cada vez que o jogo fosse aberto pelo
+	// menu as imagens e os sons seriam carregados de novo e os antigos ficariam presos na memória.
+	funcao liberar_recursos_corrida()
+	{
+		liberar_imagens_3d()
+		liberar_imagens_ui()
+
+		g.liberar_imagem(imagem_estrada)
+		g.liberar_imagem(imagem_veiculos)
+		g.liberar_imagem(imagem_estrela)
+		g.liberar_imagem(imagem_objetos)
+		g.liberar_imagem(imagem_logo)
+		g.liberar_imagem(imagem_fundo_menu)
+
+		sm.liberar_som(musica_jogo)
+		sm.liberar_som(musica_menu)
+		sm.liberar_som(som_alarme_combustivel)
+		sm.liberar_som(som_colisao)
+		sm.liberar_som(som_combustivel)
+		sm.liberar_som(som_freio)
+		sm.liberar_som(som_largada)
+		sm.liberar_som(som_ligar)
+		sm.liberar_som(som_reparo)
+		sm.liberar_som(som_trafego)
+	}
+
 	funcao gerenciar_musica_menu()
 	{
 		se (nao musica_menu_tocando)
 		{
 			parar_todas_musicas()
-			sm.reproduzir_som(musica_menu, verdadeiro)
+			canal_musica_menu_corrida = sm.reproduzir_som(musica_menu, verdadeiro)
 			musica_menu_tocando = verdadeiro
 		}
 	}
@@ -3562,8 +2048,8 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		se (nao musica_jogo_tocando)
 		{
 			parar_todas_musicas()
-			sm.reproduzir_som(musica_jogo, verdadeiro)
-			sm.reproduzir_som(som_trafego, verdadeiro)
+			canal_musica_jogo_corrida = sm.reproduzir_som(musica_jogo, verdadeiro)
+			canal_trafego_corrida = sm.reproduzir_som(som_trafego, verdadeiro)
 			musica_jogo_tocando = verdadeiro
 		}
 	}
@@ -3572,13 +2058,16 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 	{
 		se (musica_menu_tocando)
 		{
-			sm.interromper_som(musica_menu)
+			sm.interromper_som(canal_musica_menu_corrida)
+			canal_musica_menu_corrida = -1
 			musica_menu_tocando = falso
 		}
 		se (musica_jogo_tocando)
 		{
-			sm.interromper_som(musica_jogo)
-			sm.interromper_som(som_trafego)
+			sm.interromper_som(canal_musica_jogo_corrida)
+			sm.interromper_som(canal_trafego_corrida)
+			canal_musica_jogo_corrida = -1
+			canal_trafego_corrida = -1
 			musica_jogo_tocando = falso
 		}
 	}
@@ -3603,14 +2092,16 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		g.definir_titulo_janela("Corrida - 2 Jogadores")
 
 		carregar_imagens()
+		carregar_imagens_3d()
+		carregar_imagens_ui()
 		carregar_sons()
 		inicializar_elementos()
 	}
 
 	funcao carregar_imagens()
 	{
-		imagem_estrada = g.carregar_imagem("corrida/imagens/estrada.jpg") 
-		imagem_veiculos = g.carregar_imagem("corrida/imagens/veiculos.png") 
+		imagem_estrada = g.carregar_imagem("corrida/imagens/estrada_nova.jpg") 
+		imagem_veiculos = g.carregar_imagem("corrida/imagens/veiculos_novo.png") 
 		imagem_estrela = g.carregar_imagem("corrida/imagens/estrela.png")
 		imagem_objetos = g.carregar_imagem("corrida/imagens/objetos.png")
 		imagem_logo = g.carregar_imagem("corrida/imagens/watermarked_img_12591174065783305559-removebg-preview.png")
@@ -3740,6 +2231,10 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 
 	funcao atualizar_jogo()
 	{
+		frames3d = frames3d + 1
+		tempo_corrida_ms = u.tempo_decorrido() - inicio_2d_ms
+		atualizar_clima_3d()
+
 		atualizar_controles_velocidade()
 		atualizar_estrada_jogando()
 		
@@ -4023,12 +2518,20 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 	funcao desenhar_jogo()
 	{
 		desenhar_cenario()
+		desenhar_efeito_tempo_2d()
+		desenhar_farois_2d()
+		desenhar_linhas_velocidade()
 		desenhar_estrelas()
 		desenhar_galoes()
 		desenhar_inimigos()
 		desenhar_jogadores()
+		desenhar_chuva_3d(0)
+		desenhar_chuva_3d(400)
+		g.desenhar_imagem(0, 0, img_jogo_vig)
+		g.desenhar_imagem(400, 0, img_jogo_vig)
 		desenhar_divisoria()
 		desenhar_hud()
+		desenhar_avisos_2d()
 	}
 
 	funcao desenhar_cenario()
@@ -4048,19 +2551,32 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 
 	funcao desenhar_divisoria()
 	{
-		g.definir_cor(g.COR_PRETO)
+		g.definir_cor(cor_divisoria)
 		g.desenhar_retangulo(396, 0, 8, ALTURA, falso, verdadeiro)
+		g.definir_cor(cor_pn_borda)
+		g.desenhar_retangulo(396, 0, 1, ALTURA, falso, verdadeiro)
+		g.desenhar_retangulo(403, 0, 1, ALTURA, falso, verdadeiro)
+		g.definir_cor(cor_ouro)
+		para (inteiro y = 20; y < ALTURA; y = y + 60)
+		{
+			g.desenhar_elipse(398, y, 4, 4, verdadeiro)
+		}
 	}
 
 	funcao desenhar_estrelas()
 	{
-		inteiro offset_w = g.largura_imagem(imagem_estrela) / 2
-		inteiro offset_h = g.altura_imagem(imagem_estrela) / 2
-		
+		inteiro bal = (tempo_ui / 6) % 6
+		se (bal > 3)
+		{
+			bal = 6 - bal
+		}
+
 		para (inteiro i = 0; i < u.numero_linhas(estrelas_p1); i++)
 		{
-			g.desenhar_imagem(estrelas_p1[i][_X] - offset_w, estrelas_p1[i][_Y] - offset_h, imagem_estrela)
-			g.desenhar_imagem(estrelas_p2[i][_X] - offset_w, estrelas_p2[i][_Y] - offset_h, imagem_estrela)
+			g.desenhar_imagem(estrelas_p1[i][_X] - 32, estrelas_p1[i][_Y] - 32, img_brilho)
+			g.desenhar_porcao_imagem(estrelas_p1[i][_X] - 20, estrelas_p1[i][_Y] - 20 - bal, 160, 0, 40, 40, img_ui_icg)
+			g.desenhar_imagem(estrelas_p2[i][_X] - 32, estrelas_p2[i][_Y] - 32, img_brilho)
+			g.desenhar_porcao_imagem(estrelas_p2[i][_X] - 20, estrelas_p2[i][_Y] - 20 - bal, 160, 0, 40, 40, img_ui_icg)
 		}
 	}
 
@@ -4068,7 +2584,9 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 	{
 		para (inteiro i = 0; i < u.numero_linhas(galoes_p1); i++)
 		{
+			g.desenhar_imagem(galoes_p1[i][_X] - 32, galoes_p1[i][_Y] + _OBJ_GALAO_ALTURA / 2 - 32, img_brilho)
 			g.desenhar_porcao_imagem(galoes_p1[i][_X] - (_OBJ_GALAO_LARGURA / 2), galoes_p1[i][_Y], _OBJ_GALAO_SX, _OBJ_GALAO_SY, _OBJ_GALAO_LARGURA, _OBJ_GALAO_ALTURA, imagem_objetos)
+			g.desenhar_imagem(galoes_p2[i][_X] - 32, galoes_p2[i][_Y] + _OBJ_GALAO_ALTURA / 2 - 32, img_brilho)
 			g.desenhar_porcao_imagem(galoes_p2[i][_X] - (_OBJ_GALAO_LARGURA / 2), galoes_p2[i][_Y], _OBJ_GALAO_SX, _OBJ_GALAO_SY, _OBJ_GALAO_LARGURA, _OBJ_GALAO_ALTURA, imagem_objetos)
 		}
 	}
@@ -4088,7 +2606,8 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 			inteiro sy = MODELOS_VEICULOS[m_ini][_SY]
 			inteiro w = MODELOS_VEICULOS[m_ini][_LARGURA]
 			inteiro h = MODELOS_VEICULOS[m_ini][_ALTURA]
-			
+
+			desenhar_sombra_obj(matriz[i][_X] - (w / 2), matriz[i][_Y], w, h)
 			g.desenhar_porcao_imagem(matriz[i][_X] - (w / 2), matriz[i][_Y], sx, sy, w, h, imagem_veiculos)
 		}
 	}
@@ -4102,7 +2621,42 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 	funcao desenhar_carro(inteiro car[])
 	{
 		inteiro m_car = car[_MODELO]
-		g.desenhar_porcao_imagem(car[_X], car[_Y], MODELOS_VEICULOS[m_car][_SX], MODELOS_VEICULOS[m_car][_SY], MODELOS_VEICULOS[m_car][_LARGURA], MODELOS_VEICULOS[m_car][_ALTURA], imagem_veiculos)
+		inteiro w = MODELOS_VEICULOS[m_car][_LARGURA]
+		inteiro h = MODELOS_VEICULOS[m_car][_ALTURA]
+		inteiro p = 0
+		se (car[_X] >= 400)
+		{
+			p = 1
+		}
+
+		desenhar_sombra_obj(car[_X], car[_Y], w, h)
+
+		// fumaça do escapamento
+		para (inteiro i = 0; i < 3; i++)
+		{
+			inteiro desl = (tempo_ui * 3 + i * 9) % 27
+			g.definir_cor(g.COR_BRANCO)
+			g.definir_opacidade(110 - desl * 3)
+			g.desenhar_elipse(car[_X] + w / 2 - (6 + desl / 3) / 2, car[_Y] + h - 6 + desl, 6 + desl / 3, 6 + desl / 3, verdadeiro)
+		}
+		g.definir_opacidade(255)
+
+		g.desenhar_porcao_imagem(car[_X], car[_Y], MODELOS_VEICULOS[m_car][_SX], MODELOS_VEICULOS[m_car][_SY], w, h, imagem_veiculos)
+
+		// luzes de freio
+		logico freando = t.tecla_pressionada(t.TECLA_S)
+		se (p == 1)
+		{
+			freando = t.tecla_pressionada(t.TECLA_SETA_ABAIXO)
+		}
+		se (freando)
+		{
+			g.definir_cor(cor_freio)
+			g.definir_opacidade(170)
+			g.desenhar_elipse(car[_X] + 3, car[_Y] + h - 8, 12, 8, verdadeiro)
+			g.desenhar_elipse(car[_X] + w - 15, car[_Y] + h - 8, 12, 8, verdadeiro)
+			g.definir_opacidade(255)
+		}
 	}
 
 	funcao desenhar_texto_com_sombra(inteiro x, inteiro y, cadeia texto, inteiro cor, real tamanho, logico sombra)
@@ -4127,19 +2681,8 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 
 	funcao desenhar_hud()
 	{
-		// HUD P1
-		desenhar_texto_com_sombra(15, 15, "P1: " + tp.real_para_inteiro(pontuacao_p1) + "m | Estrelas: " + estrelas_p1_qtd, g.COR_AMARELO, 16.0, verdadeiro)
-		se(jogador1_vivo) desenhar_texto_com_sombra(15, 35, "Vidas: " + vidas_p1, g.COR_VERMELHO, 16.0, verdadeiro)
-		
-		// HUD P2
-		desenhar_texto_com_sombra(415, 15, "P2: " + tp.real_para_inteiro(pontuacao_p2) + "m | Estrelas: " + estrelas_p2_qtd, g.COR_AMARELO, 16.0, verdadeiro)
-		se(jogador2_vivo) desenhar_texto_com_sombra(415, 35, "Vidas: " + vidas_p2, g.COR_VERMELHO, 16.0, verdadeiro)
-
-		se (jogador1_vivo) desenhar_medidor_combustivel(15, 65, combustivel_p1)
-		se (jogador2_vivo) desenhar_medidor_combustivel(415, 65, combustivel_p2)
-
-		se (jogador1_vivo) desenhar_medidor_velocidade(15, 80, velocidade_p1)
-		se (jogador2_vivo) desenhar_medidor_velocidade(415, 80, velocidade_p2)
+		desenhar_hud_jogador(0, "P1", cor_azul_p1, pontuacao_p1, vidas_p1, estrelas_p1_qtd, combustivel_p1, velocidade_p1, jogador1_vivo)
+		desenhar_hud_jogador(400, "P2", cor_laranja_p2, pontuacao_p2, vidas_p2, estrelas_p2_qtd, combustivel_p2, velocidade_p2, jogador2_vivo)
 	}
 
 	funcao desenhar_medidor_combustivel(inteiro x, inteiro y, real valor_combustivel)
@@ -4155,13 +2698,34 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		g.definir_cor(g.COR_BRANCO)
 		g.desenhar_texto(x, y - 15, "Combustível")
 
-		g.definir_cor(cor_barra)
-		g.desenhar_retangulo(x, y, tp.real_para_inteiro(LARGURA_MEDIDOR * porcentagem), ALTURA_MEDIDOR, falso, verdadeiro)
+		g.definir_cor(cor_pn_fundo)
+		g.desenhar_retangulo(x - 2, y - 2, LARGURA_MEDIDOR + 4, ALTURA_MEDIDOR + 4, verdadeiro, verdadeiro)
 
-		g.definir_cor(g.COR_PRETO)
-		g.desenhar_retangulo(x, y, LARGURA_MEDIDOR, ALTURA_MEDIDOR, falso, falso)
-		g.definir_cor(g.COR_BRANCO)
-		g.desenhar_retangulo(x - 1, y - 1, LARGURA_MEDIDOR + 2, ALTURA_MEDIDOR + 2, falso, falso)
+		inteiro w_barra = tp.real_para_inteiro(LARGURA_MEDIDOR * porcentagem)
+		se (w_barra > 0)
+		{
+			g.definir_cor(cor_barra)
+			g.desenhar_retangulo(x, y, w_barra, ALTURA_MEDIDOR, verdadeiro, verdadeiro)
+			g.definir_cor(g.COR_BRANCO)
+			g.definir_opacidade(70)
+			g.desenhar_retangulo(x, y, w_barra, 3, falso, verdadeiro)
+			g.definir_opacidade(255)
+		}
+
+		g.definir_cor(cor_pn_fundo)
+		para (inteiro j = 1; j < 4; j++)
+		{
+			g.desenhar_retangulo(x + j * LARGURA_MEDIDOR / 4, y, 1, ALTURA_MEDIDOR, falso, verdadeiro)
+		}
+
+		g.definir_cor(cor_pn_borda)
+		g.desenhar_retangulo(x - 2, y - 2, LARGURA_MEDIDOR + 4, ALTURA_MEDIDOR + 4, verdadeiro, falso)
+
+		se (porcentagem <= 0.25 e (tempo_ui / 8) % 2 == 0)
+		{
+			g.definir_cor(g.COR_VERMELHO)
+			g.desenhar_retangulo(x - 3, y - 3, LARGURA_MEDIDOR + 6, ALTURA_MEDIDOR + 6, verdadeiro, falso)
+		}
 	}
 
 	funcao desenhar_medidor_velocidade(inteiro x, inteiro y, real vel)
@@ -4176,31 +2740,6 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		senao g.definir_cor(g.COR_VERDE) 
 		
 		g.desenhar_texto(x, y, "Velocidade: " + vel_exibida + " km/h")
-	}
-
-	funcao desenhar_menu()
-	{
-		g.desenhar_imagem(0, 0, imagem_fundo_menu)
-
-		g.definir_cor(g.COR_PRETO)
-		g.definir_opacidade(120) 
-		g.desenhar_retangulo(0, 0, LARGURA, ALTURA, falso, verdadeiro)
-		g.definir_opacidade(255)
-
-		inteiro largura_logo = g.largura_imagem(imagem_logo)
-		inteiro x_logo = (LARGURA / 2) - (largura_logo / 2)
-		g.desenhar_imagem(x_logo, 30, imagem_logo) 
-
-		inteiro cor_op1 = g.COR_BRANCO, cor_op2 = g.COR_BRANCO, cor_op3 = g.COR_BRANCO
-		se (opcao_menu == 0) cor_op1 = g.COR_VERDE
-		se (opcao_menu == 1) cor_op2 = g.COR_VERDE
-		se (opcao_menu == 2) cor_op3 = g.COR_VERDE
-		
-		desenhar_texto_centralizado(320, "1. JOGAR", cor_op1, 30.0, verdadeiro)
-		desenhar_texto_centralizado(370, "2. SKINS", cor_op2, 30.0, verdadeiro)
-		desenhar_texto_centralizado(420, "3. MELHORIAS", cor_op3, 30.0, verdadeiro)
-
-		desenhar_texto_centralizado(540, "P1: W/S/A/D  |  P2: Setas  |  ENTER para Selecionar", g.COR_AMARELO, 16.0, falso)
 	}
 
 	funcao processar_entrada_menu()
@@ -4220,13 +2759,13 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 			se (t.tecla_pressionada(t.TECLA_W) ou t.tecla_pressionada(t.TECLA_SETA_ACIMA))
 			{
 				opcao_menu = opcao_menu - 1
-				se (opcao_menu < 0) opcao_menu = 2
+				se (opcao_menu < 0) opcao_menu = 3
 				cooldown_tecla = 12
 			}
 			se (t.tecla_pressionada(t.TECLA_S) ou t.tecla_pressionada(t.TECLA_SETA_ABAIXO))
 			{
 				opcao_menu = opcao_menu + 1
-				se (opcao_menu > 2) opcao_menu = 0
+				se (opcao_menu > 3) opcao_menu = 0
 				cooldown_tecla = 12
 			}
 			se (t.tecla_pressionada(t.TECLA_ENTER))
@@ -4236,6 +2775,7 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 				{
 					sm.reproduzir_som(som_largada, falso)
 					inicializar_elementos()
+					reiniciar_ui_corrida(0)
 					estado_jogo = ESTADO_JOGANDO
 				}
 				senao se (opcao_menu == 1)
@@ -4244,106 +2784,21 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 					visualizando_skin_p2 = jogador2[_MODELO]
 					estado_jogo = ESTADO_SKINS
 				}
-				senao 
+				senao se (opcao_menu == 2)
 				{
 					estado_jogo = ESTADO_MELHORIAS
+				}
+				senao
+				{
+					sm.reproduzir_som(som_largada, falso)
+					inicializar_3d()
+					reiniciar_ui_corrida(1)
+					estado_jogo = ESTADO_3D
 				}
 			}
 		}
 	}
 
-	funcao desenhar_skins()
-	{
-		g.definir_cor(g.COR_PRETO)
-		g.definir_opacidade(220)
-		g.desenhar_retangulo(0, 0, LARGURA, ALTURA, falso, verdadeiro)
-		g.definir_opacidade(255)
-
-		desenhar_divisoria()
-
-		g.definir_cor(g.COR_AMARELO)
-		desenhar_texto_centralizado(40, "LOJA DE SKINS", g.COR_AMARELO, 35.0, verdadeiro)
-
-		// JOGADOR 1
-		g.definir_cor(g.COR_BRANCO)
-		g.definir_tamanho_texto(18.0)
-		g.desenhar_texto(90, 120, "Jogador 1 (A / D)")
-		g.definir_cor(g.COR_AMARELO)
-		g.desenhar_texto(80, 150, "Banco: " + banco_estrelas_p1 + " Estrelas")
-		
-		inteiro m1 = visualizando_skin_p1
-		inteiro w1 = MODELOS_VEICULOS[m1][_LARGURA]
-		inteiro h1 = MODELOS_VEICULOS[m1][_ALTURA]
-		g.desenhar_porcao_imagem(200 - (w1 / 2), 320 - (h1 / 2), MODELOS_VEICULOS[m1][_SX], MODELOS_VEICULOS[m1][_SY], w1, h1, imagem_veiculos)
-
-		g.definir_tamanho_texto(16.0)
-		se (jogador1[_MODELO] == m1)
-		{
-			g.definir_cor(g.COR_VERDE)
-			g.desenhar_texto(150, 420, "EQUIPADA")
-		}
-		senao se (skins_desbloqueadas_p1[m1])
-		{
-			g.definir_cor(g.COR_BRANCO)
-			g.desenhar_texto(110, 420, "Pressione [W] para Equipar")
-		}
-		senao
-		{
-			g.definir_cor(g.COR_VERMELHO)
-			g.desenhar_texto(100, 400, "BLOQUEADA (Custo: " + PRECO_SKIN + ")")
-			se (banco_estrelas_p1 >= PRECO_SKIN)
-			{
-				g.definir_cor(g.COR_VERDE)
-				g.desenhar_texto(110, 430, "Pressione [W] para Comprar")
-			}
-			senao
-			{
-				g.definir_cor(g.criar_cor(128, 128, 128))
-				g.desenhar_texto(120, 430, "Estrelas Insuficientes")
-			}
-		}
-
-		// JOGADOR 2
-		g.definir_cor(g.COR_BRANCO)
-		g.definir_tamanho_texto(18.0)
-		g.desenhar_texto(490, 120, "Jogador 2 (Esq / Dir)")
-		g.definir_cor(g.COR_AMARELO)
-		g.desenhar_texto(480, 150, "Banco: " + banco_estrelas_p2 + " Estrelas")
-		
-		inteiro m2 = visualizando_skin_p2
-		inteiro w2 = MODELOS_VEICULOS[m2][_LARGURA]
-		inteiro h2 = MODELOS_VEICULOS[m2][_ALTURA]
-		g.desenhar_porcao_imagem(600 - (w2 / 2), 320 - (h2 / 2), MODELOS_VEICULOS[m2][_SX], MODELOS_VEICULOS[m2][_SY], w2, h2, imagem_veiculos)
-
-		g.definir_tamanho_texto(16.0)
-		se (jogador2[_MODELO] == m2)
-		{
-			g.definir_cor(g.COR_VERDE)
-			g.desenhar_texto(550, 420, "EQUIPADA")
-		}
-		senao se (skins_desbloqueadas_p2[m2])
-		{
-			g.definir_cor(g.COR_BRANCO)
-			g.desenhar_texto(490, 420, "Pressione [CIMA] para Equipar")
-		}
-		senao
-		{
-			g.definir_cor(g.COR_VERMELHO)
-			g.desenhar_texto(500, 400, "BLOQUEADA (Custo: " + PRECO_SKIN + ")")
-			se (banco_estrelas_p2 >= PRECO_SKIN)
-			{
-				g.definir_cor(g.COR_VERDE)
-				g.desenhar_texto(490, 430, "Pressione [CIMA] para Comprar")
-			}
-			senao
-			{
-				g.definir_cor(g.criar_cor(128, 128, 128))
-				g.desenhar_texto(510, 430, "Estrelas Insuficientes")
-			}
-		}
-
-		desenhar_texto_centralizado(520, "Pressione ENTER para Voltar", g.COR_VERDE, 20.0, verdadeiro)
-	}
 
 	funcao processar_entrada_skins()
 	{
@@ -4419,43 +2874,6 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 				cooldown_tecla = 20
 			}
 		}
-	}
-
-	funcao desenhar_melhorias()
-	{
-		g.definir_cor(g.COR_PRETO)
-		g.definir_opacidade(230)
-		g.desenhar_retangulo(0, 0, LARGURA, ALTURA, falso, verdadeiro)
-		g.definir_opacidade(255)
-
-		desenhar_divisoria()
-		desenhar_texto_centralizado(40, "MELHORIAS (UPGRADES)", g.COR_AMARELO, 35.0, verdadeiro)
-
-		// ====== DADOS JOGADOR 1 ======
-		g.definir_tamanho_texto(18.0)
-		g.definir_cor(g.COR_BRANCO)
-		g.desenhar_texto(30, 110, "P1 (W/S para mover | D para Comprar)")
-		g.definir_cor(g.COR_AMARELO)
-		g.desenhar_texto(30, 140, "Banco: " + banco_estrelas_p1 + " Estrelas")
-
-		desenhar_item_melhoria(30, 190, "1. Vida Extra", nivel_vida_p1, 5, opcao_melhoria_p1 == 0, banco_estrelas_p1)
-		desenhar_item_melhoria(30, 260, "2. Tanque (Gasolina)", nivel_combustivel_p1, 5, opcao_melhoria_p1 == 1, banco_estrelas_p1)
-		desenhar_item_melhoria(30, 330, "3. Max Velocidade", nivel_velocidade_p1, 5, opcao_melhoria_p1 == 2, banco_estrelas_p1)
-		desenhar_item_melhoria_mult(30, 400, "4. 2x Estrelas", mult_estrelas_p1, opcao_melhoria_p1 == 3, banco_estrelas_p1)
-
-		// ====== DADOS JOGADOR 2 ======
-		g.definir_tamanho_texto(18.0)
-		g.definir_cor(g.COR_BRANCO)
-		g.desenhar_texto(430, 110, "P2 (Setas para mover | DIR para Comprar)")
-		g.definir_cor(g.COR_AMARELO)
-		g.desenhar_texto(430, 140, "Banco: " + banco_estrelas_p2 + " Estrelas")
-
-		desenhar_item_melhoria(430, 190, "1. Vida Extra", nivel_vida_p2, 5, opcao_melhoria_p2 == 0, banco_estrelas_p2)
-		desenhar_item_melhoria(430, 260, "2. Tanque (Gasolina)", nivel_combustivel_p2, 5, opcao_melhoria_p2 == 1, banco_estrelas_p2)
-		desenhar_item_melhoria(430, 330, "3. Max Velocidade", nivel_velocidade_p2, 5, opcao_melhoria_p2 == 2, banco_estrelas_p2)
-		desenhar_item_melhoria_mult(430, 400, "4. 2x Estrelas", mult_estrelas_p2, opcao_melhoria_p2 == 3, banco_estrelas_p2)
-
-		desenhar_texto_centralizado(520, "Pressione ENTER para Voltar", g.COR_VERDE, 20.0, verdadeiro)
 	}
 
 	funcao desenhar_item_melhoria(inteiro x, inteiro y, cadeia nome, inteiro nivel_atual, inteiro nivel_maximo, logico selecionado, inteiro saldo)
@@ -4626,29 +3044,6 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 		}
 	}
 
-	funcao desenhar_game_over()
-	{
-		g.definir_cor(g.COR_PRETO)
-		g.definir_opacidade(200)
-		g.desenhar_retangulo(0, 0, LARGURA, ALTURA, falso, verdadeiro)
-		g.definir_opacidade(255)
-
-		desenhar_texto_centralizado(200, "GAME OVER", g.COR_VERMELHO, 40.0, verdadeiro)
-
-		cadeia resultado = ""
-		se (pontuacao_p1 > pontuacao_p2) {
-			resultado = "Jogador 1 Venceu!"
-		} senao se (pontuacao_p2 > pontuacao_p1) {
-			resultado = "Jogador 2 Venceu!"
-		} senao {
-			resultado = "Empate!"
-		}
-
-		desenhar_texto_centralizado(280, resultado, g.COR_AMARELO, 24.0, verdadeiro)
-		desenhar_texto_centralizado(350, "P1: " + tp.real_para_inteiro(pontuacao_p1) + "m | P2: " + tp.real_para_inteiro(pontuacao_p2) + "m", g.COR_BRANCO, 18.0, verdadeiro)
-		desenhar_texto_centralizado(450, "Pressione ENTER para Voltar ao Menu", g.COR_VERDE, 18.0, verdadeiro)
-	}
-
 	funcao processar_entrada_game_over()
 	{
 		se (cooldown_tecla > 0)
@@ -4664,16 +3059,2251 @@ g.desenhar_texto(270, 870, "[ Clique fora desta caixa para fechar ]")
 			}
 		}
 	}
+
+	// -------------------------------------------------------------
+	// Carregamento
+	// -------------------------------------------------------------
+	funcao carregar_imagens_3d()
+	{
+		cadeia pasta = "corrida/imagens3d/"
+
+		img_sp[T_PINHEIRO] = g.carregar_imagem(pasta + "spr_pinheiro.png")
+		img_sp[T_PEDRA] = g.carregar_imagem(pasta + "spr_pedra.png")
+		img_sp[T_PLACA] = g.carregar_imagem(pasta + "spr_placa.png")
+		img_sp[T_OUTDOOR] = g.carregar_imagem(pasta + "spr_outdoor.png")
+		img_sp[T_POSTE] = g.carregar_imagem(pasta + "spr_poste.png")
+		img_sp[T_CONE] = g.carregar_imagem(pasta + "spr_cone.png")
+		img_sp[T_ESTRELA] = g.carregar_imagem(pasta + "spr_estrela.png")
+		img_sp[T_GALAO] = g.carregar_imagem(pasta + "spr_galao.png")
+		img_sp[T_PLATEIA] = g.carregar_imagem(pasta + "spr_plateia.png")
+		img_sp[T_ARBUSTO] = g.carregar_imagem(pasta + "spr_arbusto.png")
+		img_sp[T_TENDA] = g.carregar_imagem(pasta + "spr_tenda.png")
+		img_sp[T_CARRO] = g.carregar_imagem(pasta + "spr_carros.png")
+
+		para (inteiro i = 0; i < N_CEU; i++)
+		{
+			cadeia nome_ceu = pasta + "ceu_" + i + ".png"
+			se (i < 10)
+			{
+				nome_ceu = pasta + "ceu_0" + i + ".png"
+			}
+			img_ceu[i] = g.carregar_imagem(nome_ceu)
+		}
+
+		img_montanhas = g.carregar_imagem(pasta + "montanhas.png")
+		img_nuv_dia = g.carregar_imagem(pasta + "nuvens_dia.png")
+		img_nuv_tarde = g.carregar_imagem(pasta + "nuvens_tarde.png")
+		img_nuv_noite = g.carregar_imagem(pasta + "nuvens_noite.png")
+		img_chuva = g.carregar_imagem(pasta + "chuva.png")
+		img_balao = g.carregar_imagem(pasta + "balao.png")
+		img_ovni = g.carregar_imagem(pasta + "ovni.png")
+		img_hud_icones = g.carregar_imagem(pasta + "hud_icones.png")
+		img_painel_vel = g.carregar_imagem(pasta + "painel_vel.png")
+		img_semaforo = g.carregar_imagem(pasta + "semaforo.png")
+		img_fundo_menu_3d = g.carregar_imagem(pasta + "fundo_menu_3d.png")
+
+		cor_grama_c = g.criar_cor(62, 150, 62)
+		cor_grama_e = g.criar_cor(48, 128, 52)
+		cor_rumb_v = g.criar_cor(214, 40, 40)
+		cor_rumb_b = g.criar_cor(240, 240, 240)
+		cor_asf_a = g.criar_cor(92, 92, 98)
+		cor_asf_b = g.criar_cor(86, 86, 92)
+		cor_faixa = g.criar_cor(240, 240, 232)
+		cor_noite = g.criar_cor(6, 10, 40)
+		cor_tarde = g.criar_cor(255, 130, 40)
+		cor_farol = g.criar_cor(255, 246, 200)
+		cor_poeira = g.criar_cor(140, 110, 80)
+		cor_chuva = g.criar_cor(60, 70, 100)
+		cor_poste_arco = g.criar_cor(70, 72, 84)
+		cor_freio = g.criar_cor(255, 50, 40)
+	}
+
+	funcao liberar_imagens_3d()
+	{
+		para (inteiro i = 0; i < 12; i++)
+		{
+			g.liberar_imagem(img_sp[i])
+		}
+		para (inteiro i = 0; i < N_CEU; i++)
+		{
+			g.liberar_imagem(img_ceu[i])
+		}
+		g.liberar_imagem(img_montanhas)
+		g.liberar_imagem(img_nuv_dia)
+		g.liberar_imagem(img_nuv_tarde)
+		g.liberar_imagem(img_nuv_noite)
+		g.liberar_imagem(img_chuva)
+		g.liberar_imagem(img_balao)
+		g.liberar_imagem(img_ovni)
+		g.liberar_imagem(img_hud_icones)
+		g.liberar_imagem(img_painel_vel)
+		g.liberar_imagem(img_semaforo)
+		g.liberar_imagem(img_fundo_menu_3d)
+	}
+
+	// -------------------------------------------------------------
+	// Início de uma corrida 3D
+	// -------------------------------------------------------------
+	funcao inicializar_3d()
+	{
+		inicializar_elementos()   // reaproveita vidas, combustível, upgrades, pontuação...
+
+		LANE_C[0] = -0.75
+		LANE_C[1] = -0.25
+		LANE_C[2] = 0.25
+		LANE_C[3] = 0.75
+
+		para (inteiro p = 0; p < 2; p++)
+		{
+			pos3d[p] = 0.0
+			xp3d[p] = 0.0
+			invul3d[p] = 0
+			shake3d[p] = 0
+			prox_cp[p] = DIST_CHECKPOINT
+			cp_count[p] = 0
+			cp_banner[p] = 0
+			mont_off[p] = 0.0
+			freando3d[p] = falso
+
+			para (inteiro i = 0; i < 5; i++)
+			{
+				riv_z[p][i] = 40.0 + i * 45.0 + u.sorteia(0, 20)
+				riv_x[p][i] = LANE_C[u.sorteia(0, 3)]
+				riv_v[p][i] = 0.45 + u.sorteia(0, 35) / 100.0
+				riv_cor[p][i] = u.sorteia(0, 23)
+			}
+			para (inteiro i = 0; i < 4; i++)
+			{
+				cone_z[p][i] = 80.0 + i * 70.0 + u.sorteia(0, 40)
+				cone_x[p][i] = u.sorteia(-9, 9) / 10.0
+			}
+			para (inteiro i = 0; i < 3; i++)
+			{
+				est_z[p][i] = 35.0 + i * 75.0 + u.sorteia(0, 30)
+				est_x[p][i] = LANE_C[u.sorteia(0, 3)]
+			}
+			para (inteiro i = 0; i < 2; i++)
+			{
+				gal_z[p][i] = 120.0 + i * 260.0 + u.sorteia(0, 60)
+				gal_x[p][i] = LANE_C[u.sorteia(0, 3)]
+			}
+		}
+
+		nuv_off = 0.0
+		frames3d = 0
+		corrida_3d_ativa = falso
+		tempo_corrida_ms = 0
+		fase_dia = 0.0
+		w_dia = 1.0
+		w_noite = 0.0
+		idx_ceu = 0
+		chuva3d = falso
+		chuva_nivel = 0
+		t_largada_ms = u.tempo_decorrido()
+	}
+
+	// -------------------------------------------------------------
+	// Pista: curvatura e clima
+	// -------------------------------------------------------------
+	funcao real curva3d(real z)
+	{
+		inteiro i = tp.real_para_inteiro(z / TAM_SEG)
+		se (i * TAM_SEG > z)
+		{
+			i = i - 1
+		}
+		se (i < 0)
+		{
+			i = 0
+		}
+		real frac = (z - (i * TAM_SEG)) / TAM_SEG
+		inteiro va = CURVAS_PISTA[i % N_SEG_PISTA] - 10
+		inteiro vb = CURVAS_PISTA[(i + 1) % N_SEG_PISTA] - 10
+		retorne (va + (vb - va) * frac) / 1000.0
+	}
+
+	funcao real peso_noite(real f)
+	{
+		se (f < 0.40)
+		{
+			retorne 0.0
+		}
+		se (f < 0.50)
+		{
+			retorne (f - 0.40) / 0.10
+		}
+		se (f < 0.82)
+		{
+			retorne 1.0
+		}
+		se (f < 0.90)
+		{
+			retorne 1.0 - (f - 0.82) / 0.08
+		}
+		retorne 0.0
+	}
+
+	funcao real peso_dia(real f)
+	{
+		se (f < 0.30)
+		{
+			retorne 1.0
+		}
+		se (f < 0.40)
+		{
+			retorne 1.0 - (f - 0.30) / 0.10
+		}
+		se (f < 0.90)
+		{
+			retorne 0.0
+		}
+		retorne (f - 0.90) / 0.10
+	}
+
+	funcao atualizar_clima_3d()
+	{
+		fase_dia = (tempo_corrida_ms % CICLO_MS) / 120000.0
+		w_noite = peso_noite(fase_dia)
+		w_dia = peso_dia(fase_dia)
+
+		idx_ceu = tp.real_para_inteiro(fase_dia * 24.0)
+		se (idx_ceu > 23)
+		{
+			idx_ceu = 23
+		}
+		se (idx_ceu < 0)
+		{
+			idx_ceu = 0
+		}
+
+		// Chuva: aparece de 55 s a 85 s de cada ciclo de 100 s
+		inteiro ms_ciclo = tempo_corrida_ms % 100000
+		chuva3d = falso
+		chuva_nivel = 0
+		se (ms_ciclo >= 55000 e ms_ciclo < 85000)
+		{
+			chuva3d = verdadeiro
+			inteiro n_entra = (ms_ciclo - 55000) / 40
+			inteiro n_sai = (85000 - ms_ciclo) / 40
+			chuva_nivel = 70
+			se (n_entra < chuva_nivel)
+			{
+				chuva_nivel = n_entra
+			}
+			se (n_sai < chuva_nivel)
+			{
+				chuva_nivel = n_sai
+			}
+		}
+
+		nuv_off = nuv_off + 0.35
+		se (nuv_off >= 800.0)
+		{
+			nuv_off = nuv_off - 800.0
+		}
+	}
+
+	// -------------------------------------------------------------
+	// Atualização do jogo
+	// -------------------------------------------------------------
+	funcao atualizar_jogo_3d()
+	{
+		frames3d = frames3d + 1
+		bob3d = (frames3d / 3) % 8
+		se (bob3d > 4)
+		{
+			bob3d = 8 - bob3d
+		}
+
+		// Contagem regressiva do semáforo (2 segundos)
+		se (u.tempo_decorrido() - t_largada_ms < 2000)
+		{
+			retorne
+		}
+		se (nao corrida_3d_ativa)
+		{
+			corrida_3d_ativa = verdadeiro
+			inicio_corrida_ms = u.tempo_decorrido()
+		}
+		tempo_corrida_ms = u.tempo_decorrido() - inicio_corrida_ms
+
+		atualizar_clima_3d()
+
+		freando3d[0] = t.tecla_pressionada(t.TECLA_S)
+		freando3d[1] = t.tecla_pressionada(t.TECLA_SETA_ABAIXO)
+
+		atualizar_controles_velocidade()   // mesma aceleração/freio do modo 2D
+
+		se (jogador1_vivo)
+		{
+			atualizar_jogador_3d(0)
+			atualizar_dinamicos_3d(0)
+		}
+		se (jogador2_vivo)
+		{
+			atualizar_jogador_3d(1)
+			atualizar_dinamicos_3d(1)
+		}
+
+		gastar_combustivel()
+		verificar_colisoes_3d()
+
+		se (nao jogador1_vivo e nao jogador2_vivo)
+		{
+			estado_jogo = ESTADO_GAME_OVER
+			cooldown_tecla = 20
+		}
+	}
+
+	funcao ajustar_velocidade_3d(inteiro p, real fator, real subtrai)
+	{
+		real nova = 0.0
+		se (p == 0)
+		{
+			nova = velocidade_p1 * fator - subtrai
+			se (nova < 6.0)
+			{
+				nova = mat.menor_numero(6.0, velocidade_p1)
+			}
+			velocidade_p1 = nova
+		}
+		senao
+		{
+			nova = velocidade_p2 * fator - subtrai
+			se (nova < 6.0)
+			{
+				nova = mat.menor_numero(6.0, velocidade_p2)
+			}
+			velocidade_p2 = nova
+		}
+	}
+
+	funcao atualizar_jogador_3d(inteiro p)
+	{
+		real vel = velocidade_p1
+		se (p == 1)
+		{
+			vel = velocidade_p2
+		}
+		real vm = vel * 0.1   // unidades de mundo por quadro
+
+		real direcao = 0.0
+		se (p == 0)
+		{
+			se (t.tecla_pressionada(t.TECLA_A))
+			{
+				direcao = direcao - 1.0
+			}
+			se (t.tecla_pressionada(t.TECLA_D))
+			{
+				direcao = direcao + 1.0
+			}
+		}
+		senao
+		{
+			se (t.tecla_pressionada(t.TECLA_SETA_ESQUERDA))
+			{
+				direcao = direcao - 1.0
+			}
+			se (t.tecla_pressionada(t.TECLA_SETA_DIREITA))
+			{
+				direcao = direcao + 1.0
+			}
+		}
+
+		real aderencia = 1.0
+		se (chuva3d)
+		{
+			aderencia = 0.7
+		}
+
+		real nx = xp3d[p]
+		nx = nx + direcao * 0.04 * aderencia * (0.45 + vm * 0.45)
+		// força centrífuga: a curva empurra o carro para fora
+		nx = nx - curva3d(pos3d[p] + Z_CARRO) * 1000.0 * vm * 0.0011
+		// derrapagem leve na chuva
+		se (chuva3d)
+		{
+			nx = nx + (((frames3d / 20) % 7) - 3) * 0.0007 * vm
+		}
+
+		se (nx > 1.45)
+		{
+			nx = 1.45
+			ajustar_velocidade_3d(p, 0.96, 0.0)
+		}
+		se (nx < -1.45)
+		{
+			nx = -1.45
+			ajustar_velocidade_3d(p, 0.96, 0.0)
+		}
+		// fora do asfalto (acostamento e grama): perde velocidade
+		se (nx > 1.04 ou nx < -1.04)
+		{
+			ajustar_velocidade_3d(p, 1.0, 0.35)
+		}
+		xp3d[p] = nx
+
+		pos3d[p] = pos3d[p] + vm
+
+		se (invul3d[p] > 0)
+		{
+			invul3d[p] = invul3d[p] - 1
+		}
+		se (shake3d[p] > 0)
+		{
+			shake3d[p] = shake3d[p] - 1
+		}
+		se (cp_banner[p] > 0)
+		{
+			cp_banner[p] = cp_banner[p] - 1
+		}
+
+		// montanhas se movem devagar ao contornar curvas (paralaxe)
+		mont_off[p] = mont_off[p] + curva3d(pos3d[p] + 40.0) * 1000.0 * vm * 0.55
+		se (mont_off[p] >= 800.0)
+		{
+			mont_off[p] = mont_off[p] - 800.0
+		}
+		se (mont_off[p] < 0.0)
+		{
+			mont_off[p] = mont_off[p] + 800.0
+		}
+
+		// pontuação em metros, igual ao modo 2D
+		se (p == 0)
+		{
+			pontuacao_p1 = pontuacao_p1 + (velocidade_p1 / 12.0)
+		}
+		senao
+		{
+			pontuacao_p2 = pontuacao_p2 + (velocidade_p2 / 12.0)
+		}
+
+		// checkpoint: passou pelo arco => bônus de combustível
+		se (pos3d[p] + Z_CARRO >= prox_cp[p])
+		{
+			prox_cp[p] = prox_cp[p] + DIST_CHECKPOINT
+			cp_count[p] = cp_count[p] + 1
+			cp_banner[p] = 120
+			sm.reproduzir_som(som_combustivel, falso)
+			se (p == 0)
+			{
+				combustivel_p1 = mat.menor_numero(MAXIMO_COMBUSTIVEL, combustivel_p1 + 3000.0)
+				se (combustivel_p1 > MAXIMO_COMBUSTIVEL * 0.25)
+				{
+					alarme_p1_tocado = falso
+				}
+			}
+			senao
+			{
+				combustivel_p2 = mat.menor_numero(MAXIMO_COMBUSTIVEL, combustivel_p2 + 3000.0)
+				se (combustivel_p2 > MAXIMO_COMBUSTIVEL * 0.25)
+				{
+					alarme_p2_tocado = falso
+				}
+			}
+		}
+	}
+
+	// Rivais, cones, estrelas e galões
+	funcao atualizar_dinamicos_3d(inteiro p)
+	{
+		para (inteiro i = 0; i < 5; i++)
+		{
+			riv_z[p][i] = riv_z[p][i] + riv_v[p][i]
+			se (riv_z[p][i] < pos3d[p] - 12.0 ou riv_z[p][i] > pos3d[p] + 330.0)
+			{
+				reiniciar_rival_3d(p, i)
+			}
+		}
+		para (inteiro i = 0; i < 4; i++)
+		{
+			se (cone_z[p][i] < pos3d[p] - 10.0)
+			{
+				reiniciar_cone_3d(p, i)
+			}
+		}
+		para (inteiro i = 0; i < 3; i++)
+		{
+			se (est_z[p][i] < pos3d[p] - 10.0)
+			{
+				reiniciar_estrela_3d(p, i)
+			}
+		}
+		para (inteiro i = 0; i < 2; i++)
+		{
+			se (gal_z[p][i] < pos3d[p] - 10.0)
+			{
+				reiniciar_galao_3d(p, i)
+			}
+		}
+	}
+
+	funcao reiniciar_rival_3d(inteiro p, inteiro i)
+	{
+		real zmax = pos3d[p] + 90.0
+		para (inteiro j = 0; j < 5; j++)
+		{
+			se (riv_z[p][j] > zmax)
+			{
+				zmax = riv_z[p][j]
+			}
+		}
+		riv_z[p][i] = zmax + u.sorteia(25, 70)
+		riv_x[p][i] = LANE_C[u.sorteia(0, 3)]
+		riv_v[p][i] = 0.45 + u.sorteia(0, 35) / 100.0
+		riv_cor[p][i] = u.sorteia(0, 23)
+	}
+
+	funcao reiniciar_cone_3d(inteiro p, inteiro i)
+	{
+		real zmax = pos3d[p] + 120.0
+		para (inteiro j = 0; j < 4; j++)
+		{
+			se (cone_z[p][j] > zmax)
+			{
+				zmax = cone_z[p][j]
+			}
+		}
+		cone_z[p][i] = zmax + u.sorteia(50, 130)
+		cone_x[p][i] = u.sorteia(-9, 9) / 10.0
+	}
+
+	funcao reiniciar_estrela_3d(inteiro p, inteiro i)
+	{
+		real zmax = pos3d[p] + 60.0
+		para (inteiro j = 0; j < 3; j++)
+		{
+			se (est_z[p][j] > zmax)
+			{
+				zmax = est_z[p][j]
+			}
+		}
+		est_z[p][i] = zmax + u.sorteia(70, 160)
+		est_x[p][i] = LANE_C[u.sorteia(0, 3)]
+	}
+
+	funcao reiniciar_galao_3d(inteiro p, inteiro i)
+	{
+		real zmax = pos3d[p] + 100.0
+		para (inteiro j = 0; j < 2; j++)
+		{
+			se (gal_z[p][j] > zmax)
+			{
+				zmax = gal_z[p][j]
+			}
+		}
+		gal_z[p][i] = zmax + u.sorteia(180, 380)
+		gal_x[p][i] = LANE_C[u.sorteia(0, 3)]
+	}
+
+	// O objeto cruzou o plano do carro neste quadro? (dz = z_objeto - z_carro, rel = velocidade relativa)
+	funcao logico cruzou_3d(real dz, real rel)
+	{
+		se (rel >= 0.0)
+		{
+			retorne dz <= 0.9 e dz >= -(rel + 0.6)
+		}
+		retorne dz >= -0.9 e dz <= (-rel + 0.6)
+	}
+
+	funcao bater_3d(inteiro p)
+	{
+		sm.reproduzir_som(som_colisao, falso)
+		invul3d[p] = 80
+		shake3d[p] = 24
+		ajustar_velocidade_3d(p, 0.55, 0.0)
+		se (p == 0)
+		{
+			vidas_p1 = vidas_p1 - 1
+			se (vidas_p1 <= 0)
+			{
+				jogador1_vivo = falso
+			}
+		}
+		senao
+		{
+			vidas_p2 = vidas_p2 - 1
+			se (vidas_p2 <= 0)
+			{
+				jogador2_vivo = falso
+			}
+		}
+	}
+
+	funcao verificar_colisoes_3d()
+	{
+		para (inteiro p = 0; p < 2; p++)
+		{
+			logico vivo = jogador1_vivo
+			real vel = velocidade_p1
+			se (p == 1)
+			{
+				vivo = jogador2_vivo
+				vel = velocidade_p2
+			}
+
+			se (vivo)
+			{
+				real vm = vel * 0.1
+				real zc = pos3d[p] + Z_CARRO
+				real xc = xp3d[p]
+
+				// rivais
+				para (inteiro i = 0; i < 5; i++)
+				{
+					se (invul3d[p] == 0 e mat.valor_absoluto(riv_x[p][i] - xc) < 0.30)
+					{
+						se (cruzou_3d(riv_z[p][i] - zc, vm - riv_v[p][i]))
+						{
+							bater_3d(p)
+							reiniciar_rival_3d(p, i)
+						}
+					}
+				}
+
+				// cones: só atrapalham (perdem velocidade), não tiram vida
+				para (inteiro i = 0; i < 4; i++)
+				{
+					se (invul3d[p] == 0 e mat.valor_absoluto(cone_x[p][i] - xc) < 0.28)
+					{
+						se (cruzou_3d(cone_z[p][i] - zc, vm))
+						{
+							sm.reproduzir_som(som_colisao, falso)
+							shake3d[p] = 12
+							ajustar_velocidade_3d(p, 0.65, 0.0)
+							reiniciar_cone_3d(p, i)
+						}
+					}
+				}
+
+				// estrelas
+				para (inteiro i = 0; i < 3; i++)
+				{
+					se (mat.valor_absoluto(est_x[p][i] - xc) < 0.34)
+					{
+						se (cruzou_3d(est_z[p][i] - zc, vm))
+						{
+							sm.reproduzir_som(som_reparo, falso)
+							inteiro ganho = 1
+							se (p == 0)
+							{
+								se (mult_estrelas_p1)
+								{
+									ganho = 2
+								}
+								estrelas_p1_qtd = estrelas_p1_qtd + ganho
+								banco_estrelas_p1 = banco_estrelas_p1 + ganho
+							}
+							senao
+							{
+								se (mult_estrelas_p2)
+								{
+									ganho = 2
+								}
+								estrelas_p2_qtd = estrelas_p2_qtd + ganho
+								banco_estrelas_p2 = banco_estrelas_p2 + ganho
+							}
+							reiniciar_estrela_3d(p, i)
+						}
+					}
+				}
+
+				// galões de combustível
+				para (inteiro i = 0; i < 2; i++)
+				{
+					se (mat.valor_absoluto(gal_x[p][i] - xc) < 0.34)
+					{
+						se (cruzou_3d(gal_z[p][i] - zc, vm))
+						{
+							sm.reproduzir_som(som_combustivel, falso)
+							se (p == 0)
+							{
+								combustivel_p1 = mat.menor_numero(MAXIMO_COMBUSTIVEL, combustivel_p1 + COMBUSTIVEL_GALAO)
+								se (combustivel_p1 > MAXIMO_COMBUSTIVEL * 0.25)
+								{
+									alarme_p1_tocado = falso
+								}
+							}
+							senao
+							{
+								combustivel_p2 = mat.menor_numero(MAXIMO_COMBUSTIVEL, combustivel_p2 + COMBUSTIVEL_GALAO)
+								se (combustivel_p2 > MAXIMO_COMBUSTIVEL * 0.25)
+								{
+									alarme_p2_tocado = falso
+								}
+							}
+							reiniciar_galao_3d(p, i)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// -------------------------------------------------------------
+	// Desenho: ferramentas com recorte na vista (evita invadir a outra metade)
+	// -------------------------------------------------------------
+	funcao ret_vista(inteiro xa, inteiro y, inteiro xb, inteiro h, inteiro vx0)
+	{
+		se (xa < vx0)
+		{
+			xa = vx0
+		}
+		se (xb > vx0 + VISTA_W)
+		{
+			xb = vx0 + VISTA_W
+		}
+		se (xb > xa)
+		{
+			g.desenhar_retangulo(xa, y, xb - xa, h, falso, verdadeiro)
+		}
+	}
+
+	funcao porcao_vista(inteiro dx, inteiro dy, inteiro sx, inteiro sy, inteiro larg, inteiro alt, inteiro imagem, inteiro vx0)
+	{
+		inteiro esq = vx0
+		inteiro dir = vx0 + VISTA_W
+		se (dx >= dir ou dx + larg <= esq)
+		{
+			retorne
+		}
+		se (dx < esq)
+		{
+			inteiro corte = esq - dx
+			dx = esq
+			sx = sx + corte
+			larg = larg - corte
+		}
+		se (dx + larg > dir)
+		{
+			larg = dir - dx
+		}
+		g.desenhar_porcao_imagem(dx, dy, sx, sy, larg, alt, imagem)
+	}
+
+	// Janela de 400 px sobre uma imagem que se repete na horizontal (largura 800)
+	funcao faixa_loop(inteiro imagem, inteiro larg_img, inteiro alt_img, inteiro y, inteiro desloc, inteiro vx0)
+	{
+		inteiro o = desloc % larg_img
+		se (o < 0)
+		{
+			o = o + larg_img
+		}
+		se (o + VISTA_W <= larg_img)
+		{
+			g.desenhar_porcao_imagem(vx0, y, o, 0, VISTA_W, alt_img, imagem)
+		}
+		senao
+		{
+			inteiro w1 = larg_img - o
+			g.desenhar_porcao_imagem(vx0, y, o, 0, w1, alt_img, imagem)
+			g.desenhar_porcao_imagem(vx0 + w1, y, 0, 0, VISTA_W - w1, alt_img, imagem)
+		}
+	}
+
+	funcao texto_vista(inteiro vx0, inteiro y, cadeia texto, inteiro cor, real tamanho)
+	{
+		g.definir_tamanho_texto(tamanho)
+		inteiro larg_txt = g.largura_texto(texto)
+		desenhar_texto_com_sombra(vx0 + (VISTA_W / 2) - (larg_txt / 2), y, texto, cor, tamanho, verdadeiro)
+	}
+
+	// -------------------------------------------------------------
+	// Desenho: cena
+	// -------------------------------------------------------------
+	funcao desenhar_jogo_3d()
+	{
+		desenhar_vista_3d(0)
+		desenhar_vista_3d(1)
+		desenhar_divisoria()
+	}
+
+	funcao desenhar_vista_3d(inteiro p)
+	{
+		inteiro vx0 = p * VISTA_W
+
+		desenhar_ceu_3d(p, vx0)
+		calcular_centros_3d(p, vx0)
+		desenhar_chao_3d(p, vx0)
+		montar_lista_3d(p)
+		ordenar_lista_3d()
+		desenhar_lista_3d(vx0)
+		desenhar_noite_3d(vx0)
+		desenhar_farois_3d(p, vx0)
+		desenhar_carro_jogador_3d(p, vx0)
+		desenhar_brilhos_3d(vx0)
+		desenhar_chuva_3d(vx0)
+		desenhar_hud_3d(p, vx0)
+		desenhar_avisos_3d(p, vx0)
+	}
+
+	funcao desenhar_ceu_3d(inteiro p, inteiro vx0)
+	{
+		// Céu: 24 quadros pré-misturados (dia -> entardecer -> noite -> amanhecer)
+		g.desenhar_imagem(vx0, 0, img_ceu[CEU_MAP[idx_ceu]])
+
+		// Nuvens (cor muda com a hora)
+		inteiro img_n = img_nuv_dia
+		se (w_noite > 0.5)
+		{
+			img_n = img_nuv_noite
+		}
+		senao se (w_dia < 0.5)
+		{
+			img_n = img_nuv_tarde
+		}
+		faixa_loop(img_n, 800, 90, 24, tp.real_para_inteiro(nuv_off), vx0)
+
+		// Balão de ar quente: cruza o céu de dia, a cada 50 s
+		se (w_dia > 0.5)
+		{
+			inteiro ms_b = tempo_corrida_ms % 50000
+			se (ms_b < 26000)
+			{
+				inteiro bx = vx0 - 80 + (ms_b * 560 / 26000)
+				inteiro by = 95 - (ms_b / 1000)
+				porcao_vista(bx, by, 0, 0, 80, 110, img_balao, vx0)
+			}
+		}
+
+		// OVNI: aparece de noite, a cada 37 s
+		se (w_noite > 0.6)
+		{
+			inteiro ms_u = tempo_corrida_ms % 37000
+			se (ms_u < 10000)
+			{
+				inteiro ux = vx0 + VISTA_W - (ms_u * 500 / 10000)
+				inteiro bal = 10 - ((tempo_corrida_ms / 90) % 20)
+				se (bal < 0)
+				{
+					bal = -bal
+				}
+				porcao_vista(ux, 36 + bal, 0, 0, 96, 44, img_ovni, vx0)
+			}
+		}
+
+		// Montanhas (paralaxe)
+		faixa_loop(img_montanhas, 800, 120, HORIZONTE - 110, tp.real_para_inteiro(mont_off[p]), vx0)
+	}
+
+	// Calcula o centro (x) da pista em cada linha, somando a curvatura de longe para perto
+	funcao calcular_centros_3d(inteiro p, inteiro vx0)
+	{
+		real cam = xp3d[p] * 0.75
+		real acum_x = 0.0
+		real vel_x = 0.0
+		real d_ant = DIST_K / NUM_FAIXAS
+		inteiro k = NUM_FAIXAS
+		enquanto (k >= 1)
+		{
+			real dk = DIST_K / k
+			real passo_d = dk - d_ant
+			real cv = curva3d(pos3d[p] + dk)
+			vel_x = vel_x + cv * passo_d
+			acum_x = acum_x + vel_x * passo_d
+			d_ant = dk
+			real hw = HW_BASE * k / NUM_FAIXAS
+			cx3d[k] = vx0 + 200.0 - cam * hw + (acum_x / RW_MUNDO) * hw
+			k = k - 1
+		}
+	}
+
+	funcao desenhar_chao_3d(inteiro p, inteiro vx0)
+	{
+		g.definir_cor(cor_grama_e)
+		g.desenhar_retangulo(vx0, HORIZONTE, VISTA_W, 600 - HORIZONTE, falso, verdadeiro)
+
+		inteiro k = 1
+		enquanto (k <= NUM_FAIXAS)
+		{
+			inteiro y = HORIZONTE + (k - 1) * FAIXA_PX
+			real zz = pos3d[p] + DIST_K / k
+			inteiro par = tp.real_para_inteiro(zz / TAM_BANDA) % 2
+			inteiro par_traco = tp.real_para_inteiro(zz / TAM_TRACO) % 2
+			real hw = HW_BASE * k / NUM_FAIXAS
+			inteiro cxi = tp.real_para_inteiro(cx3d[k])
+			inteiro hwi = tp.real_para_inteiro(hw)
+			inteiro rumb = tp.real_para_inteiro(hw * 0.14)
+			se (rumb < 1)
+			{
+				rumb = 1
+			}
+
+			// faixa clara de grama
+			se (k > 8 e par == 0)
+			{
+				g.definir_cor(cor_grama_c)
+				ret_vista(vx0, y, vx0 + VISTA_W, FAIXA_PX, vx0)
+			}
+
+			// zebras (vermelho/branco)
+			se (k > 8 e par == 0)
+			{
+				g.definir_cor(cor_rumb_v)
+			}
+			senao
+			{
+				g.definir_cor(cor_rumb_b)
+			}
+			ret_vista(cxi - hwi - rumb, y, cxi - hwi, FAIXA_PX, vx0)
+			ret_vista(cxi + hwi, y, cxi + hwi + rumb, FAIXA_PX, vx0)
+
+			// asfalto
+			se (par == 0)
+			{
+				g.definir_cor(cor_asf_a)
+			}
+			senao
+			{
+				g.definir_cor(cor_asf_b)
+			}
+			ret_vista(cxi - hwi, y, cxi + hwi, FAIXA_PX, vx0)
+
+			// linhas
+			se (k > 3)
+			{
+				inteiro lw = tp.real_para_inteiro(hw * 0.03)
+				se (lw < 1)
+				{
+					lw = 1
+				}
+				inteiro borda = tp.real_para_inteiro(hw * 0.93)
+				g.definir_cor(cor_faixa)
+				ret_vista(cxi - borda - lw, y, cxi - borda + lw, FAIXA_PX, vx0)
+				ret_vista(cxi + borda - lw, y, cxi + borda + lw, FAIXA_PX, vx0)
+
+				se (par_traco == 0)
+				{
+					inteiro meio = tp.real_para_inteiro(hw * 0.5)
+					ret_vista(cxi - meio - lw, y, cxi - meio + lw, FAIXA_PX, vx0)
+					ret_vista(cxi - lw, y, cxi + lw, FAIXA_PX, vx0)
+					ret_vista(cxi + meio - lw, y, cxi + meio + lw, FAIXA_PX, vx0)
+				}
+			}
+
+			k = k + 1
+		}
+	}
+
+	// -------------------------------------------------------------
+	// Lista de objetos (cenário infinito gerado por uma fórmula, sem guardar nada)
+	// -------------------------------------------------------------
+	funcao adicionar_item_3d(real dz, real xw, inteiro tipo, inteiro variacao)
+	{
+		se (dz < 1.0 ou dz > 175.0 ou dl_n >= 90)
+		{
+			retorne
+		}
+		dl_z[dl_n] = dz
+		dl_x[dl_n] = xw
+		dl_tipo[dl_n] = tipo
+		dl_var[dl_n] = variacao
+		dl_n = dl_n + 1
+	}
+
+	funcao montar_lista_3d(inteiro p)
+	{
+		dl_n = 0
+		glow_n = 0
+		real pos = pos3d[p]
+
+		inteiro idx_ini = tp.real_para_inteiro((pos + 1.0) / 7.0)
+		inteiro idx_fim = tp.real_para_inteiro((pos + 175.0) / 7.0)
+
+		para (inteiro idx = idx_ini; idx <= idx_fim; idx++)
+		{
+			para (inteiro lado = 0; lado < 2; lado++)
+			{
+				inteiro h = (idx * 13 + lado * 29 + (idx / 5) * 7) % 23
+				inteiro tipo = -1
+				inteiro variacao = 0
+
+				se (h < 9)
+				{
+					tipo = T_PINHEIRO
+					variacao = h % 2
+				}
+				senao se (h == 9 ou h == 10)
+				{
+					tipo = T_PEDRA
+				}
+				senao se (h == 11)
+				{
+					tipo = T_PLACA
+				}
+				senao se (h == 12 e idx % 2 == 0)
+				{
+					tipo = T_POSTE
+				}
+				senao se (h == 13 e idx % 6 == 0)
+				{
+					tipo = T_OUTDOOR
+					variacao = (idx / 6) % 3
+				}
+				senao se (h == 14)
+				{
+					tipo = T_ARBUSTO
+				}
+				senao se (h == 15)
+				{
+					tipo = T_PLATEIA
+					variacao = idx % 2
+				}
+				senao se (h == 16)
+				{
+					tipo = T_TENDA
+					variacao = idx % 3
+				}
+
+				se (tipo >= 0)
+				{
+					real xw = 1.35 + ((idx * 7 + lado * 3) % 9) * 0.12
+					se (lado == 0)
+					{
+						xw = -xw
+					}
+					adicionar_item_3d(idx * 7.0 - pos, xw, tipo, variacao)
+				}
+			}
+		}
+
+		para (inteiro i = 0; i < 5; i++)
+		{
+			adicionar_item_3d(riv_z[p][i] - pos, riv_x[p][i], T_CARRO, riv_cor[p][i])
+		}
+		para (inteiro i = 0; i < 4; i++)
+		{
+			adicionar_item_3d(cone_z[p][i] - pos, cone_x[p][i], T_CONE, 0)
+		}
+		para (inteiro i = 0; i < 3; i++)
+		{
+			adicionar_item_3d(est_z[p][i] - pos, est_x[p][i], T_ESTRELA, 0)
+		}
+		para (inteiro i = 0; i < 2; i++)
+		{
+			adicionar_item_3d(gal_z[p][i] - pos, gal_x[p][i], T_GALAO, 0)
+		}
+		adicionar_item_3d(prox_cp[p] - pos, 0.0, T_ARCO, 0)
+	}
+
+	// Ordena do mais longe para o mais perto (ordenação por inserção)
+	funcao ordenar_lista_3d()
+	{
+		para (inteiro i = 0; i < dl_n; i++)
+		{
+			dl_ord[i] = i
+		}
+		para (inteiro i = 1; i < dl_n; i++)
+		{
+			inteiro chave = dl_ord[i]
+			inteiro j = i - 1
+			logico seguir_ordenando = verdadeiro
+			enquanto (seguir_ordenando)
+			{
+				se (j < 0)
+				{
+					seguir_ordenando = falso
+				}
+				senao se (dl_z[dl_ord[j]] < dl_z[chave])
+				{
+					dl_ord[j + 1] = dl_ord[j]
+					j = j - 1
+				}
+				senao
+				{
+					seguir_ordenando = falso
+				}
+			}
+			dl_ord[j + 1] = chave
+		}
+	}
+
+	funcao desenhar_lista_3d(inteiro vx0)
+	{
+		para (inteiro n = 0; n < dl_n; n++)
+		{
+			inteiro i = dl_ord[n]
+			inteiro k = tp.real_para_inteiro(DIST_K / dl_z[i])
+
+			se (k >= 2 e k <= NUM_FAIXAS)
+			{
+				real hw = HW_BASE * k / NUM_FAIXAS
+				inteiro sx = tp.real_para_inteiro(cx3d[k] + dl_x[i] * hw)
+
+				se (dl_tipo[i] == T_ARCO)
+				{
+					desenhar_arco_3d(k, vx0)
+				}
+				senao
+				{
+					inteiro fr = FRAME_K[k]
+					se (fr >= 0)
+					{
+						inteiro tipo = dl_tipo[i]
+						inteiro cw = SP_FW[tipo][fr]
+						inteiro ch = SP_CH[tipo]
+						inteiro gy = HORIZONTE + k * FAIXA_PX
+						inteiro dy = gy - ch + 3
+						se (tipo == T_ESTRELA ou tipo == T_GALAO)
+						{
+							dy = dy - bob3d * 2   // estrelas e galões "flutuam"
+						}
+						porcao_vista(sx - cw / 2, dy, SP_FX[tipo][fr], dl_var[i] * ch, cw, ch, img_sp[tipo], vx0)
+
+						// poste de luz: guarda o brilho para desenhar depois da escuridão
+						se (tipo == T_POSTE e w_noite > 0.25 e glow_n < 8)
+						{
+							real esc = ESCALA_FR[fr]
+							inteiro raio = tp.real_para_inteiro(26.0 * esc) + 2
+							glow_x[glow_n] = sx - tp.real_para_inteiro(26.0 * esc)
+							glow_y[glow_n] = gy - tp.real_para_inteiro(130.0 * esc)
+							glow_r[glow_n] = raio
+							glow_n = glow_n + 1
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Arco de checkpoint: desenhado com formas, ocupa a largura da pista
+	funcao desenhar_arco_3d(inteiro k, inteiro vx0)
+	{
+		real hw = HW_BASE * k / NUM_FAIXAS
+		inteiro cxi = tp.real_para_inteiro(cx3d[k])
+		inteiro borda = tp.real_para_inteiro(hw * 1.08)
+		inteiro gy = HORIZONTE + k * FAIXA_PX
+		inteiro alt = tp.real_para_inteiro(hw * 0.62)
+		inteiro lp = tp.real_para_inteiro(hw * 0.05)
+		se (lp < 1)
+		{
+			lp = 1
+		}
+		inteiro esp = tp.real_para_inteiro(hw * 0.16)
+		se (esp < 2)
+		{
+			esp = 2
+		}
+
+		g.definir_cor(cor_poste_arco)
+		ret_vista(cxi - borda - lp, gy - alt, cxi - borda + lp, alt, vx0)
+		ret_vista(cxi + borda - lp, gy - alt, cxi + borda + lp, alt, vx0)
+
+		// faixa quadriculada em cima
+		inteiro seg = 14
+		inteiro larg_total = borda * 2
+		para (inteiro r = 0; r < 2; r++)
+		{
+			para (inteiro s = 0; s < seg; s++)
+			{
+				se ((r + s) % 2 == 0)
+				{
+					g.definir_cor(g.COR_BRANCO)
+				}
+				senao
+				{
+					g.definir_cor(g.COR_PRETO)
+				}
+				inteiro xa = cxi - borda + (larg_total * s) / seg
+				inteiro xb = cxi - borda + (larg_total * (s + 1)) / seg
+				ret_vista(xa, gy - alt + (esp * r) / 2, xb, (esp + 1) / 2, vx0)
+			}
+		}
+	}
+
+	// -------------------------------------------------------------
+	// Carro do jogador, poeira e freio
+	// -------------------------------------------------------------
+	funcao desenhar_carro_jogador_3d(inteiro p, inteiro vx0)
+	{
+		logico vivo = jogador1_vivo
+		inteiro modelo = jogador1[_MODELO]
+		se (p == 1)
+		{
+			vivo = jogador2_vivo
+			modelo = jogador2[_MODELO]
+		}
+		se (nao vivo)
+		{
+			retorne
+		}
+
+		real cam = xp3d[p] * 0.75
+		real hwc = HW_BASE * K_CARRO / NUM_FAIXAS
+		inteiro px = vx0 + 200 + tp.real_para_inteiro((xp3d[p] - cam) * hwc)
+		inteiro gy = HORIZONTE + K_CARRO * FAIXA_PX
+
+		se (shake3d[p] > 0)
+		{
+			px = px + u.sorteia(-3, 3)
+		}
+		se (frames3d % 2 == 0)
+		{
+			gy = gy + 1   // vibração do motor
+		}
+
+		// poeira quando está fora da pista
+		se (xp3d[p] > 1.02 ou xp3d[p] < -1.02)
+		{
+			g.definir_cor(cor_poeira)
+			g.definir_opacidade(110)
+			para (inteiro i = 0; i < 6; i++)
+			{
+				inteiro ex = px - 46 + u.sorteia(0, 80)
+				inteiro ey = gy - 14 + u.sorteia(0, 14)
+				inteiro er = 8 + u.sorteia(0, 12)
+				g.desenhar_elipse(ex, ey, er, er, verdadeiro)
+			}
+			g.definir_opacidade(255)
+		}
+
+		// pisca enquanto está invulnerável
+		se (invul3d[p] > 0 e ((invul3d[p] / 4) % 2) == 0)
+		{
+			retorne
+		}
+
+		inteiro cor_carro = modelo
+		se (cor_carro < 0 ou cor_carro > 23)
+		{
+			cor_carro = 0
+		}
+		inteiro fr = FRAME_K[K_CARRO]
+		inteiro cw = SP_FW[T_CARRO][fr]
+		inteiro ch = SP_CH[T_CARRO]
+		porcao_vista(px - cw / 2, gy - ch + 3, SP_FX[T_CARRO][fr], cor_carro * ch, cw, ch, img_sp[T_CARRO], vx0)
+
+		// luz de freio
+		se (freando3d[p])
+		{
+			g.definir_cor(cor_freio)
+			g.definir_opacidade(190)
+			ret_vista(px - 37, gy - 31, px - 20, 10, vx0)
+			ret_vista(px + 20, gy - 31, px + 37, 10, vx0)
+			g.definir_opacidade(255)
+		}
+	}
+
+	// -------------------------------------------------------------
+	// Efeitos de tempo: noite, entardecer, faróis, brilhos e chuva
+	// -------------------------------------------------------------
+	funcao desenhar_noite_3d(inteiro vx0)
+	{
+		real w_tarde = 1.0 - w_dia - w_noite
+		se (w_tarde > 0.05)
+		{
+			g.definir_cor(cor_tarde)
+			g.definir_opacidade(tp.real_para_inteiro(w_tarde * 45.0))
+			ret_vista(vx0, HORIZONTE - 112, vx0 + VISTA_W, 600 - (HORIZONTE - 112), vx0)
+			g.definir_opacidade(255)
+		}
+		se (w_noite > 0.02)
+		{
+			g.definir_cor(cor_noite)
+			g.definir_opacidade(tp.real_para_inteiro(w_noite * 135.0))
+			ret_vista(vx0, HORIZONTE - 112, vx0 + VISTA_W, 600 - (HORIZONTE - 112), vx0)
+			g.definir_opacidade(255)
+		}
+	}
+
+	funcao desenhar_farois_3d(inteiro p, inteiro vx0)
+	{
+		se (w_noite > 0.25)
+		{
+			g.definir_cor(cor_farol)
+			para (inteiro k = 18; k <= 60; k = k + 6)
+			{
+				real hwk = HW_BASE * k / NUM_FAIXAS
+				inteiro cxl = tp.real_para_inteiro(cx3d[k] + xp3d[p] * hwk)
+				inteiro meia = tp.real_para_inteiro(hwk * 0.42)
+				inteiro yk = HORIZONTE + (k - 1) * FAIXA_PX
+
+				g.definir_opacidade(tp.real_para_inteiro(26.0 * w_noite))
+				ret_vista(cxl - meia, yk, cxl + meia, 6 * FAIXA_PX, vx0)
+				g.definir_opacidade(tp.real_para_inteiro(30.0 * w_noite))
+				ret_vista(cxl - meia / 2, yk, cxl + meia / 2, 6 * FAIXA_PX, vx0)
+			}
+			g.definir_opacidade(255)
+		}
+	}
+
+	funcao desenhar_brilhos_3d(inteiro vx0)
+	{
+		g.definir_cor(cor_farol)
+		g.definir_opacidade(80)
+		para (inteiro i = 0; i < glow_n; i++)
+		{
+			se (glow_x[i] > vx0 + 30 e glow_x[i] < vx0 + VISTA_W - 30)
+			{
+				g.desenhar_elipse(glow_x[i] - glow_r[i], glow_y[i] - glow_r[i], glow_r[i] * 2, glow_r[i] * 2, verdadeiro)
+			}
+		}
+		g.definir_opacidade(255)
+	}
+
+	funcao desenhar_chuva_3d(inteiro vx0)
+	{
+		se (chuva3d)
+		{
+			g.definir_cor(cor_chuva)
+			g.definir_opacidade(chuva_nivel)
+			ret_vista(vx0, 0, vx0 + VISTA_W, 600, vx0)
+			g.definir_opacidade(255)
+
+			se (chuva_nivel > 20)
+			{
+				inteiro off = (frames3d * 22) % 600
+				g.desenhar_imagem(vx0, off - 600, img_chuva)
+				g.desenhar_imagem(vx0, off, img_chuva)
+			}
+		}
+	}
+
+	// -------------------------------------------------------------
+	// HUD e avisos
+	// -------------------------------------------------------------
+	funcao desenhar_hud_3d(inteiro p, inteiro vx0)
+	{
+		cadeia nome = "P1"
+		real pontos = pontuacao_p1
+		inteiro vidas = vidas_p1
+		inteiro estrelas = estrelas_p1_qtd
+		real comb = combustivel_p1
+		real vel = velocidade_p1
+		logico vivo = jogador1_vivo
+		se (p == 1)
+		{
+			nome = "P2"
+			pontos = pontuacao_p2
+			vidas = vidas_p2
+			estrelas = estrelas_p2_qtd
+			comb = combustivel_p2
+			vel = velocidade_p2
+			vivo = jogador2_vivo
+		}
+
+		desenhar_painel(vx0 + 8, 6, 206, 196, 140)
+		desenhar_texto_com_sombra(vx0 + 15, 10, nome + "  " + tp.real_para_inteiro(pontos) + " m", g.COR_AMARELO, 20.0, verdadeiro)
+
+		// vidas (corações)
+		se (vivo)
+		{
+			para (inteiro i = 0; i < vidas; i++)
+			{
+				g.desenhar_porcao_imagem(vx0 + 15 + i * 27, 38, 0, 0, 28, 28, img_hud_icones)
+			}
+		}
+
+		// combustível
+		g.desenhar_porcao_imagem(vx0 + 15, 76, 28, 0, 28, 28, img_hud_icones)
+		desenhar_medidor_combustivel(vx0 + 50, 90, comb)
+
+		// estrelas
+		g.desenhar_porcao_imagem(vx0 + 15, 106, 56, 0, 28, 28, img_hud_icones)
+		desenhar_texto_com_sombra(vx0 + 50, 110, "x " + estrelas, g.COR_AMARELO, 18.0, verdadeiro)
+
+		// hora do dia / clima
+		inteiro icone = 4
+		cadeia txt_clima = "Dia"
+		se (chuva3d e chuva_nivel > 20)
+		{
+			icone = 6
+			txt_clima = "Chuva"
+		}
+		senao se (w_noite > 0.5)
+		{
+			icone = 5
+			txt_clima = "Noite"
+		}
+		senao se (w_dia < 0.5)
+		{
+			icone = 7
+			txt_clima = "Entardecer"
+		}
+		g.desenhar_porcao_imagem(vx0 + 15, 136, icone * 28, 0, 28, 28, img_hud_icones)
+		desenhar_texto_com_sombra(vx0 + 50, 141, txt_clima, g.COR_BRANCO, 16.0, verdadeiro)
+
+		// próximo checkpoint
+		inteiro falta = tp.real_para_inteiro(prox_cp[p] - (pos3d[p] + Z_CARRO))
+		se (falta < 0)
+		{
+			falta = 0
+		}
+		g.desenhar_porcao_imagem(vx0 + 15, 166, 84, 0, 28, 28, img_hud_icones)
+		desenhar_texto_com_sombra(vx0 + 50, 171, "CP " + cp_count[p] + "  (" + falta + " m)", g.COR_BRANCO, 16.0, verdadeiro)
+
+		// velocímetro analógico
+		se (vivo)
+		{
+			inteiro gx = vx0 + 262
+			inteiro gyy = 456
+			g.desenhar_imagem(gx, gyy, img_painel_vel)
+
+			real razao = (vel * 8.0) / 240.0
+			se (razao > 1.0)
+			{
+				razao = 1.0
+			}
+			inteiro n_ag = tp.real_para_inteiro(razao * 32.0)
+			inteiro ax = gx + 66
+			inteiro ay = gyy + 66
+			g.definir_cor(g.COR_VERMELHO)
+			g.desenhar_linha(ax, ay, ax + AGULHA_DX[n_ag] - 50, ay + AGULHA_DY[n_ag] - 50)
+			g.desenhar_linha(ax + 1, ay + 1, ax + AGULHA_DX[n_ag] - 49, ay + AGULHA_DY[n_ag] - 49)
+			g.definir_cor(g.COR_BRANCO)
+			g.desenhar_elipse(ax - 5, ay - 5, 10, 10, verdadeiro)
+
+			inteiro kmh = tp.real_para_inteiro(vel * 8.0)
+			desenhar_texto_com_sombra(gx + 44, gyy + 86, "" + kmh, g.COR_BRANCO, 18.0, verdadeiro)
+		}
+	}
+
+	funcao desenhar_avisos_3d(inteiro p, inteiro vx0)
+	{
+		logico vivo = jogador1_vivo
+		se (p == 1)
+		{
+			vivo = jogador2_vivo
+		}
+
+		se (vivo)
+		{
+			inteiro vid3 = vidas_p1
+			real comb3 = combustivel_p1
+			se (p == 1)
+			{
+				vid3 = vidas_p2
+				comb3 = combustivel_p2
+			}
+			desenhar_flash_dano(p, vx0, vid3)
+			desenhar_alerta_combustivel(vx0, comb3)
+		}
+
+		// banner de checkpoint
+		se (cp_banner[p] > 0 e vivo)
+		{
+			texto_vista(vx0, 205, "CHECKPOINT " + cp_count[p] + "!", g.COR_AMARELO, 26.0)
+			texto_vista(vx0, 238, "+ combustível", g.COR_VERDE, 16.0)
+		}
+
+		// semáforo da largada
+		inteiro tl = u.tempo_decorrido() - t_largada_ms
+		se (tl < 2800)
+		{
+			inteiro estado = 3
+			cadeia aviso = "VAI!"
+			se (tl < 1000)
+			{
+				estado = 1
+				aviso = "PREPARE-SE..."
+			}
+			senao se (tl < 2000)
+			{
+				estado = 2
+				aviso = "ATENÇÃO..."
+			}
+			g.desenhar_porcao_imagem(vx0 + 167, 60, estado * 66, 0, 66, 150, img_semaforo)
+			texto_vista(vx0, 220, aviso, g.COR_BRANCO, 22.0)
+		}
+
+		// jogador fora da corrida
+		se (nao vivo)
+		{
+			g.definir_cor(g.COR_PRETO)
+			g.definir_opacidade(150)
+			ret_vista(vx0, 0, vx0 + VISTA_W, 600, vx0)
+			g.definir_opacidade(255)
+			texto_vista(vx0, 270, "FIM DE JOGO", g.COR_VERMELHO, 28.0)
+		}
+	}
+
+	// -------------------------------------------------------------
+	// Interface: carregamento e ferramentas
+	// -------------------------------------------------------------
+	funcao carregar_imagens_ui()
+	{
+		NOMES_SKINS[0] = "Relâmpago Azul"
+		NOMES_SKINS[1] = "Fogo Vermelho"
+		NOMES_SKINS[2] = "Táxi Urbano"
+		NOMES_SKINS[3] = "Soldado Verde"
+		NOMES_SKINS[4] = "Neon Roxo"
+		NOMES_SKINS[5] = "Zebra Branca"
+		NOMES_SKINS[6] = "Laranja Sete"
+		NOMES_SKINS[7] = "Grafite Fosco"
+		NOMES_SKINS[8] = "Retrô Rosa"
+		NOMES_SKINS[9] = "Turquesa Urbano"
+		NOMES_SKINS[10] = "Patrulha"
+		NOMES_SKINS[11] = "Picape Barro"
+		NOMES_SKINS[12] = "Perua Verde"
+		NOMES_SKINS[13] = "Raio Amarelo"
+		NOMES_SKINS[14] = "Marinho Executivo"
+		NOMES_SKINS[15] = "Selva Rally"
+		NOMES_SKINS[16] = "Retrô Celeste"
+		NOMES_SKINS[17] = "Hatch Chamas"
+		NOMES_SKINS[18] = "Prata Coupé"
+		NOMES_SKINS[19] = "Picape Marítima"
+		NOMES_SKINS[20] = "Bombeiro"
+		NOMES_SKINS[21] = "Noite Dourada"
+		NOMES_SKINS[22] = "Perua Laranja"
+		NOMES_SKINS[23] = "Escola de Pilotos"
+		cadeia pasta = "corrida/imagens_ui/"
+		img_ui_ic = g.carregar_imagem(pasta + "ui_icones.png")
+		img_ui_icg = g.carregar_imagem(pasta + "ui_icones_g.png")
+		img_trofeu = g.carregar_imagem(pasta + "trofeu.png")
+		img_podio = g.carregar_imagem(pasta + "podio.png")
+		img_go_bg = g.carregar_imagem(pasta + "game_over_bg.jpg")
+		img_menu_vig = g.carregar_imagem(pasta + "menu_vinheta.png")
+		img_jogo_vig = g.carregar_imagem(pasta + "jogo_vinheta.png")
+		img_xadrez = g.carregar_imagem(pasta + "xadrez.png")
+		img_brilho = g.carregar_imagem(pasta + "brilho.png")
+		img_fumaca = g.carregar_imagem(pasta + "fumaca.png")
+
+		cor_pn_fundo = g.criar_cor(12, 14, 26)
+		cor_pn_borda = g.criar_cor(120, 132, 176)
+		cor_ouro = g.criar_cor(255, 196, 40)
+		cor_ok = g.criar_cor(46, 170, 92)
+		cor_ruim = g.criar_cor(230, 70, 70)
+		cor_texto_fraco = g.criar_cor(170, 178, 204)
+		cor_azul_p1 = g.criar_cor(46, 120, 230)
+		cor_laranja_p2 = g.criar_cor(240, 130, 30)
+		cor_divisoria = g.criar_cor(16, 18, 28)
+	}
+
+	funcao liberar_imagens_ui()
+	{
+		g.liberar_imagem(img_ui_ic)
+		g.liberar_imagem(img_ui_icg)
+		g.liberar_imagem(img_trofeu)
+		g.liberar_imagem(img_podio)
+		g.liberar_imagem(img_go_bg)
+		g.liberar_imagem(img_menu_vig)
+		g.liberar_imagem(img_jogo_vig)
+		g.liberar_imagem(img_xadrez)
+		g.liberar_imagem(img_brilho)
+		g.liberar_imagem(img_fumaca)
+	}
+
+	// modo: 0 = Corrida 2D, 1 = Corrida 3D
+	funcao reiniciar_ui_corrida(inteiro modo)
+	{
+		vidas_ant[0] = -1
+		vidas_ant[1] = -1
+		flash_dano[0] = 0
+		flash_dano[1] = 0
+		inicio_2d_ms = u.tempo_decorrido()
+		modo_ultima_corrida = modo
+		w_dia = 1.0
+		w_noite = 0.0
+		chuva3d = falso
+		chuva_nivel = 0
+		idx_ceu = 0
+	}
+
+	funcao registrar_resultado()
+	{
+		novo_recorde_p1 = falso
+		novo_recorde_p2 = falso
+		real melhor = pontuacao_p1
+		se (pontuacao_p2 > melhor)
+		{
+			melhor = pontuacao_p2
+		}
+		se (melhor > recorde_dist)
+		{
+			recorde_dist = melhor
+			se (pontuacao_p1 >= pontuacao_p2)
+			{
+				novo_recorde_p1 = verdadeiro
+			}
+			senao
+			{
+				novo_recorde_p2 = verdadeiro
+			}
+		}
+	}
+
+	// ícones de 24 px e de 40 px (índices: 0 cadeado, 1 ok, 2 seta esq, 3 seta dir, 4 estrela,
+	// 5 coração, 6 combustível, 7 velocímetro, 8 2x, 9 troféu, 10 X, 11 bandeira, 12 carro,
+	// 13 coroa, 14 brilho, 15 relógio)
+	funcao icone_ui(inteiro x, inteiro y, inteiro idx)
+	{
+		g.desenhar_porcao_imagem(x, y, idx * 24, 0, 24, 24, img_ui_ic)
+	}
+
+	funcao icone_ui_g(inteiro x, inteiro y, inteiro idx)
+	{
+		g.desenhar_porcao_imagem(x, y, idx * 40, 0, 40, 40, img_ui_icg)
+	}
+
+	funcao texto_em(inteiro xc, inteiro y, cadeia texto, inteiro cor, real tamanho, logico sombra)
+	{
+		g.definir_tamanho_texto(tamanho)
+		inteiro lt = g.largura_texto(texto)
+		desenhar_texto_com_sombra(xc - lt / 2, y, texto, cor, tamanho, sombra)
+	}
+
+	// Painel translúcido com cantos arredondados
+	funcao desenhar_painel(inteiro x, inteiro y, inteiro larg, inteiro alt, inteiro opac)
+	{
+		g.definir_cor(cor_pn_fundo)
+		g.definir_opacidade(opac)
+		g.desenhar_retangulo(x, y, larg, alt, verdadeiro, verdadeiro)
+		g.definir_cor(cor_pn_borda)
+		g.definir_opacidade(170)
+		g.desenhar_retangulo(x, y, larg, alt, verdadeiro, falso)
+		g.definir_opacidade(255)
+	}
+
+	// Barrinhas de nível (ex.: 3 de 5)
+	funcao desenhar_pips(inteiro x, inteiro y, inteiro nivel, inteiro maximo)
+	{
+		para (inteiro i = 0; i < maximo; i++)
+		{
+			se (i < nivel)
+			{
+				g.definir_cor(cor_ouro)
+			}
+			senao
+			{
+				g.definir_cor(cor_pn_fundo)
+			}
+			g.desenhar_retangulo(x + i * 24, y, 20, 11, verdadeiro, verdadeiro)
+			g.definir_cor(cor_pn_borda)
+			g.desenhar_retangulo(x + i * 24, y, 20, 11, verdadeiro, falso)
+		}
+	}
+
+	// Fundo comum das telas de menu (imagem + escurecimento + vinheta + faixas animadas)
+	funcao desenhar_fundo_ui()
+	{
+		g.desenhar_imagem(0, 0, imagem_fundo_menu)
+		g.definir_cor(g.COR_PRETO)
+		g.definir_opacidade(150)
+		g.desenhar_retangulo(0, 0, LARGURA, ALTURA, falso, verdadeiro)
+		g.definir_opacidade(255)
+		g.desenhar_imagem(0, 0, img_menu_vig)
+		faixas_xadrez_ui()
+	}
+
+	funcao faixas_xadrez_ui()
+	{
+		faixa_loop(img_xadrez, 800, 16, 0, tempo_ui * 2, 0)
+		faixa_loop(img_xadrez, 800, 16, 0, tempo_ui * 2, 400)
+		faixa_loop(img_xadrez, 800, 16, 584, 0 - tempo_ui * 2, 0)
+		faixa_loop(img_xadrez, 800, 16, 584, 0 - tempo_ui * 2, 400)
+	}
+
+	// -------------------------------------------------------------
+	// Efeitos do modo 2D: sombras, luzes, velocidade, tempo
+	// -------------------------------------------------------------
+	funcao desenhar_sombra_obj(inteiro x, inteiro y, inteiro larg, inteiro alt)
+	{
+		g.definir_cor(g.COR_PRETO)
+		g.definir_opacidade(70)
+		g.desenhar_elipse(x + 3, y + alt - 12, larg, 22, verdadeiro)
+		g.definir_opacidade(255)
+	}
+
+	funcao desenhar_efeito_tempo_2d()
+	{
+		real w_tarde = 1.0 - w_dia - w_noite
+		se (w_tarde > 0.05)
+		{
+			g.definir_cor(cor_tarde)
+			g.definir_opacidade(tp.real_para_inteiro(w_tarde * 55.0))
+			g.desenhar_retangulo(0, 0, LARGURA, ALTURA, falso, verdadeiro)
+		}
+		se (w_noite > 0.02)
+		{
+			g.definir_cor(cor_noite)
+			g.definir_opacidade(tp.real_para_inteiro(w_noite * 125.0))
+			g.desenhar_retangulo(0, 0, LARGURA, ALTURA, falso, verdadeiro)
+		}
+		g.definir_opacidade(255)
+	}
+
+	funcao desenhar_farois_2d()
+	{
+		se (w_noite > 0.2)
+		{
+			g.definir_cor(cor_farol)
+			para (inteiro p = 0; p < 2; p++)
+			{
+				logico vivo = jogador1_vivo
+				inteiro cxl = jogador1[_X] + MODELOS_VEICULOS[jogador1[_MODELO]][_LARGURA] / 2
+				inteiro cyl = jogador1[_Y]
+				se (p == 1)
+				{
+					vivo = jogador2_vivo
+					cxl = jogador2[_X] + MODELOS_VEICULOS[jogador2[_MODELO]][_LARGURA] / 2
+					cyl = jogador2[_Y]
+				}
+				se (vivo)
+				{
+					para (inteiro i = 0; i < 9; i++)
+					{
+						inteiro larg = 60 + i * 16
+						g.definir_opacidade(tp.real_para_inteiro(w_noite * (46 - i * 4)))
+						ret_vista(cxl - larg / 2, cyl - 28 - i * 32, cxl + larg / 2, 32, p * VISTA_W)
+					}
+				}
+			}
+			g.definir_opacidade(255)
+		}
+	}
+
+	funcao desenhar_linhas_velocidade()
+	{
+		para (inteiro p = 0; p < 2; p++)
+		{
+			real vel = velocidade_p1
+			logico vivo = jogador1_vivo
+			se (p == 1)
+			{
+				vel = velocidade_p2
+				vivo = jogador2_vivo
+			}
+			se (vivo e vel > 15.0)
+			{
+				g.definir_cor(g.COR_BRANCO)
+				g.definir_opacidade(tp.real_para_inteiro((vel - 15.0) * 6.0))
+				para (inteiro i = 0; i < 6; i++)
+				{
+					inteiro lx = p * VISTA_W + 24 + ((i * 97 + 13) % 352)
+					inteiro ly = ((tempo_ui * tp.real_para_inteiro(vel) + i * 131) % 700) - 80
+					g.desenhar_retangulo(lx, ly, 2, 60, falso, verdadeiro)
+				}
+				g.definir_opacidade(255)
+			}
+		}
+	}
+
+	// Aviso de dano (tela vermelha) quando perde uma vida
+	funcao desenhar_flash_dano(inteiro p, inteiro vx0, inteiro vidas)
+	{
+		se (vidas_ant[p] < 0)
+		{
+			vidas_ant[p] = vidas
+		}
+		se (vidas < vidas_ant[p])
+		{
+			flash_dano[p] = 14
+		}
+		vidas_ant[p] = vidas
+		se (flash_dano[p] > 0)
+		{
+			g.definir_cor(g.COR_VERMELHO)
+			g.definir_opacidade(flash_dano[p] * 9)
+			ret_vista(vx0, 0, vx0 + VISTA_W, 600, vx0)
+			g.definir_opacidade(255)
+			flash_dano[p] = flash_dano[p] - 1
+		}
+	}
+
+	// Moldura vermelha piscando com pouco combustível
+	funcao desenhar_alerta_combustivel(inteiro vx0, real comb)
+	{
+		se (comb < MAXIMO_COMBUSTIVEL * 0.25 e comb > 0.0 e (tempo_ui / 10) % 2 == 0)
+		{
+			g.definir_cor(g.COR_VERMELHO)
+			g.definir_opacidade(110)
+			ret_vista(vx0, 0, vx0 + VISTA_W, 6, vx0)
+			ret_vista(vx0, 594, vx0 + VISTA_W, 6, vx0)
+			ret_vista(vx0, 0, vx0 + 6, 600, vx0)
+			ret_vista(vx0 + VISTA_W - 6, 0, vx0 + VISTA_W, 600, vx0)
+			g.definir_opacidade(255)
+			texto_em(vx0 + 200, 150, "COMBUSTÍVEL BAIXO!", g.COR_VERMELHO, 18.0, verdadeiro)
+		}
+	}
+
+	funcao desenhar_avisos_2d()
+	{
+		para (inteiro p = 0; p < 2; p++)
+		{
+			inteiro vx0 = p * VISTA_W
+			logico vivo = jogador1_vivo
+			inteiro vid = vidas_p1
+			real comb = combustivel_p1
+			real pontos = pontuacao_p1
+			se (p == 1)
+			{
+				vivo = jogador2_vivo
+				vid = vidas_p2
+				comb = combustivel_p2
+				pontos = pontuacao_p2
+			}
+
+			se (vivo)
+			{
+				desenhar_flash_dano(p, vx0, vid)
+				desenhar_alerta_combustivel(vx0, comb)
+			}
+			senao
+			{
+				g.definir_cor(g.COR_PRETO)
+				g.definir_opacidade(150)
+				ret_vista(vx0, 0, vx0 + VISTA_W, 600, vx0)
+				g.definir_opacidade(255)
+				icone_ui_g(vx0 + 180, 238, 10)
+				texto_em(vx0 + 200, 290, "ELIMINADO", g.COR_VERMELHO, 28.0, verdadeiro)
+				texto_em(vx0 + 200, 330, "" + tp.real_para_inteiro(pontos) + " m", g.COR_AMARELO, 20.0, verdadeiro)
+			}
+		}
+	}
+
+	// -------------------------------------------------------------
+	// HUD do modo 2D
+	// -------------------------------------------------------------
+	funcao desenhar_hud_jogador(inteiro x0, cadeia nome, inteiro cor_nome, real pontos, inteiro vidas, inteiro estrelas, real comb, real vel, logico vivo)
+	{
+		desenhar_painel(x0 + 8, 8, 206, 128, 150)
+
+		g.definir_cor(cor_nome)
+		g.desenhar_retangulo(x0 + 16, 15, 34, 24, verdadeiro, verdadeiro)
+		desenhar_texto_com_sombra(x0 + 22, 18, nome, g.COR_BRANCO, 16.0, falso)
+		desenhar_texto_com_sombra(x0 + 60, 13, "" + tp.real_para_inteiro(pontos) + " m", g.COR_AMARELO, 22.0, verdadeiro)
+
+		se (vivo)
+		{
+			para (inteiro i = 0; i < vidas; i++)
+			{
+				icone_ui(x0 + 16 + i * 21, 44, 5)
+			}
+			icone_ui(x0 + 150, 44, 4)
+			desenhar_texto_com_sombra(x0 + 176, 47, "x" + estrelas, g.COR_AMARELO, 16.0, verdadeiro)
+
+			icone_ui(x0 + 14, 74, 6)
+			desenhar_medidor_combustivel(x0 + 46, 90, comb)
+
+			icone_ui(x0 + 14, 104, 7)
+			inteiro kmh = tp.real_para_inteiro(vel * 8.0)
+			inteiro cor_vel = g.COR_VERDE
+			se (vel > 13.0)
+			{
+				cor_vel = g.COR_VERMELHO
+			}
+			senao se (vel < 11.0)
+			{
+				cor_vel = cor_azul_p1
+			}
+			desenhar_texto_com_sombra(x0 + 46, 107, "" + kmh + " km/h", cor_vel, 15.0, verdadeiro)
+
+			real razao = vel / 36.0
+			se (razao > 1.0)
+			{
+				razao = 1.0
+			}
+			g.definir_cor(cor_pn_fundo)
+			g.desenhar_retangulo(x0 + 138, 112, 66, 7, verdadeiro, verdadeiro)
+			g.definir_cor(cor_vel)
+			g.desenhar_retangulo(x0 + 138, 112, tp.real_para_inteiro(66.0 * razao), 7, verdadeiro, verdadeiro)
+		}
+	}
+
+	// -------------------------------------------------------------
+	// Menu, skins, melhorias e derrota
+	// -------------------------------------------------------------
+	funcao desenhar_botao_menu(inteiro y, cadeia texto, inteiro icone, logico sel)
+	{
+		inteiro bw = 380
+		inteiro bh = 46
+		inteiro bx = (LARGURA - bw) / 2
+		inteiro pulso = (tempo_ui / 6) % 8
+		se (pulso > 4)
+		{
+			pulso = 8 - pulso
+		}
+
+		se (sel)
+		{
+			g.definir_cor(cor_ouro)
+			g.definir_opacidade(40 + pulso * 10)
+			g.desenhar_retangulo(bx - 6, y - 6, bw + 12, bh + 12, verdadeiro, verdadeiro)
+			g.definir_opacidade(245)
+			g.desenhar_retangulo(bx, y, bw, bh, verdadeiro, verdadeiro)
+			g.definir_opacidade(255)
+			icone_ui_g(bx + 12 + pulso, y + 3, icone)
+			texto_em(LARGURA / 2, y + 10, texto, cor_pn_fundo, 24.0, falso)
+			icone_ui(bx + bw - 38, y + 11, 3)
+		}
+		senao
+		{
+			desenhar_painel(bx, y, bw, bh, 160)
+			icone_ui_g(bx + 12, y + 3, icone)
+			texto_em(LARGURA / 2, y + 10, texto, g.COR_BRANCO, 24.0, verdadeiro)
+		}
+	}
+
+	funcao desenhar_menu()
+	{
+		se (opcao_menu == 3)
+		{
+			g.desenhar_imagem(0, 0, img_fundo_menu_3d)
+		}
+		senao
+		{
+			g.desenhar_imagem(0, 0, imagem_fundo_menu)
+		}
+		g.desenhar_imagem(0, 0, img_menu_vig)
+		faixas_xadrez_ui()
+
+		// estrelas guardadas de cada jogador
+		desenhar_painel(14, 26, 118, 30, 150)
+		icone_ui(20, 29, 4)
+		desenhar_texto_com_sombra(50, 33, "P1  " + banco_estrelas_p1, g.COR_AMARELO, 16.0, verdadeiro)
+		desenhar_painel(668, 26, 118, 30, 150)
+		icone_ui(674, 29, 4)
+		desenhar_texto_com_sombra(704, 33, "P2  " + banco_estrelas_p2, g.COR_AMARELO, 16.0, verdadeiro)
+
+		// logo com brilho e leve balanço
+		inteiro bal = (tempo_ui / 10) % 8
+		se (bal > 4)
+		{
+			bal = 8 - bal
+		}
+		inteiro largura_logo = g.largura_imagem(imagem_logo)
+		inteiro x_logo = (LARGURA / 2) - (largura_logo / 2)
+		g.definir_cor(cor_ouro)
+		g.definir_opacidade(28)
+		g.desenhar_elipse(250, 150 + bal, 300, 130, verdadeiro)
+		g.definir_opacidade(255)
+		g.desenhar_imagem(x_logo, 24 + bal, imagem_logo)
+
+		desenhar_botao_menu(300, "JOGAR", 11, opcao_menu == 0)
+		desenhar_botao_menu(356, "SKINS", 12, opcao_menu == 1)
+		desenhar_botao_menu(412, "MELHORIAS", 7, opcao_menu == 2)
+		desenhar_botao_menu(468, "CORRIDA 3D", 14, opcao_menu == 3)
+
+		cadeia desc = ""
+		escolha (opcao_menu)
+		{
+			caso 0:
+				desc = "Corrida clássica para dois jogadores, com dia, noite e chuva"
+				pare
+			caso 1:
+				desc = "Compre e equipe novos carros com as estrelas coletadas"
+				pare
+			caso 2:
+				desc = "Melhore vidas, tanque, velocidade máxima e bônus de estrelas"
+				pare
+			caso 3:
+				desc = "NOVO: perspectiva 3D, curvas, checkpoints e tela dividida"
+				pare
+		}
+		desenhar_painel(100, 526, 600, 28, 165)
+		texto_em(LARGURA / 2, 531, desc, g.COR_AMARELO, 15.0, falso)
+		texto_em(LARGURA / 2, 562, "W/S ou setas: escolher   |   ENTER: confirmar   |   ESC: sair", cor_texto_fraco, 13.0, falso)
+	}
+
+	funcao desenhar_card_skin(inteiro x0, cadeia nome, cadeia ctrl, cadeia tecla, inteiro banco, inteiro vis, inteiro equip, logico desbloq)
+	{
+		desenhar_painel(x0 + 20, 96, 360, 410, 165)
+
+		icone_ui_g(x0 + 32, 106, 12)
+		desenhar_texto_com_sombra(x0 + 80, 108, nome, g.COR_BRANCO, 22.0, verdadeiro)
+		desenhar_texto_com_sombra(x0 + 80, 134, ctrl, cor_texto_fraco, 13.0, falso)
+
+		desenhar_painel(x0 + 262, 110, 108, 30, 170)
+		icone_ui(x0 + 268, 113, 4)
+		desenhar_texto_com_sombra(x0 + 298, 117, "" + banco, g.COR_AMARELO, 16.0, verdadeiro)
+
+		// número e nome da skin
+		desenhar_texto_com_sombra(x0 + 36, 168, "SKIN " + (vis + 1) + " / 24", cor_texto_fraco, 14.0, falso)
+		desenhar_texto_com_sombra(x0 + 36, 192, NOMES_SKINS[vis], g.COR_BRANCO, 17.0, verdadeiro)
+
+		// prévia da mesma skin no modo 3D (vista traseira)
+		desenhar_painel(x0 + 218, 154, 152, 112, 190)
+		desenhar_texto_com_sombra(x0 + 232, 158, "VISÃO 3D", cor_texto_fraco, 12.0, falso)
+		inteiro prev_w = SP_FW[T_CARRO][14]
+		inteiro prev_h = SP_CH[T_CARRO]
+		inteiro prev_x = x0 + 294 - prev_w / 2
+		g.desenhar_porcao_imagem(prev_x, 188, SP_FX[T_CARRO][14], vis * prev_h, prev_w, prev_h, img_sp[T_CARRO])
+		se (nao desbloq)
+		{
+			g.definir_cor(g.COR_PRETO)
+			g.definir_opacidade(140)
+			g.desenhar_retangulo(prev_x, 188, prev_w, prev_h, falso, verdadeiro)
+			g.definir_opacidade(255)
+			icone_ui(x0 + 282, 188 + prev_h / 2 - 12, 0)
+		}
+
+		g.desenhar_imagem(x0 + 40, 300, img_podio)
+
+		inteiro w = MODELOS_VEICULOS[vis][_LARGURA]
+		inteiro h = MODELOS_VEICULOS[vis][_ALTURA]
+		inteiro cxs = x0 + 200
+		inteiro base = 420
+		g.desenhar_porcao_imagem(cxs - w / 2, base - h, MODELOS_VEICULOS[vis][_SX], MODELOS_VEICULOS[vis][_SY], w, h, imagem_veiculos)
+		se (nao desbloq)
+		{
+			g.definir_cor(g.COR_PRETO)
+			g.definir_opacidade(150)
+			g.desenhar_retangulo(cxs - w / 2, base - h, w, h, falso, verdadeiro)
+			g.definir_opacidade(255)
+			icone_ui_g(cxs - 20, base - h / 2 - 20, 0)
+		}
+
+		inteiro bal = (tempo_ui / 8) % 6
+		se (bal > 3)
+		{
+			bal = 6 - bal
+		}
+		icone_ui_g(x0 + 34 - bal, 330, 2)
+		icone_ui_g(x0 + 326 + bal, 330, 3)
+
+		se (equip == vis)
+		{
+			g.definir_cor(cor_ok)
+			g.desenhar_retangulo(x0 + 80, 452, 240, 36, verdadeiro, verdadeiro)
+			icone_ui(x0 + 92, 458, 1)
+			texto_em(x0 + 212, 460, "EQUIPADA", g.COR_BRANCO, 18.0, verdadeiro)
+		}
+		senao se (desbloq)
+		{
+			desenhar_painel(x0 + 80, 452, 240, 36, 200)
+			texto_em(x0 + 200, 460, tecla + " EQUIPAR", g.COR_BRANCO, 17.0, verdadeiro)
+		}
+		senao se (banco >= PRECO_SKIN)
+		{
+			g.definir_cor(cor_ouro)
+			g.desenhar_retangulo(x0 + 80, 452, 240, 36, verdadeiro, verdadeiro)
+			icone_ui(x0 + 92, 458, 4)
+			texto_em(x0 + 212, 460, tecla + " COMPRAR  (" + PRECO_SKIN + ")", cor_pn_fundo, 17.0, falso)
+		}
+		senao
+		{
+			desenhar_painel(x0 + 80, 452, 240, 36, 200)
+			icone_ui(x0 + 92, 458, 0)
+			texto_em(x0 + 212, 460, "FALTAM " + (PRECO_SKIN - banco) + " ESTRELAS", cor_ruim, 15.0, verdadeiro)
+		}
+	}
+
+	funcao desenhar_skins()
+	{
+		desenhar_fundo_ui()
+		desenhar_divisoria()
+
+		g.definir_tamanho_texto(34.0)
+		inteiro lt = g.largura_texto("LOJA DE SKINS")
+		icone_ui_g(400 - lt / 2 - 52, 34, 12)
+		icone_ui_g(400 + lt / 2 + 14, 34, 12)
+		texto_em(400, 36, "LOJA DE SKINS", g.COR_AMARELO, 34.0, verdadeiro)
+
+		desenhar_card_skin(0, "Jogador 1", "A / D trocar  |  W equipar", "[W]", banco_estrelas_p1, visualizando_skin_p1, jogador1[_MODELO], skins_desbloqueadas_p1[visualizando_skin_p1])
+		desenhar_card_skin(400, "Jogador 2", "Esq / Dir trocar  |  Cima equipar", "[CIMA]", banco_estrelas_p2, visualizando_skin_p2, jogador2[_MODELO], skins_desbloqueadas_p2[visualizando_skin_p2])
+
+		desenhar_painel(290, 534, 220, 30, 170)
+		texto_em(400, 540, "ENTER para voltar", g.COR_VERDE, 17.0, falso)
+	}
+
+	funcao desenhar_linha_melhoria(inteiro x, inteiro y, cadeia nome, inteiro icone, inteiro nivel, inteiro maximo, inteiro custo, inteiro banco, logico sel, logico eh_mult)
+	{
+		se (sel)
+		{
+			g.definir_cor(cor_ouro)
+			g.definir_opacidade(80)
+			g.desenhar_retangulo(x - 4, y - 4, 334, 72, verdadeiro, verdadeiro)
+			g.definir_opacidade(255)
+			desenhar_painel(x, y, 326, 64, 225)
+		}
+		senao
+		{
+			desenhar_painel(x, y, 326, 64, 150)
+		}
+
+		icone_ui_g(x + 10, y + 12, icone)
+
+		se (sel)
+		{
+			desenhar_texto_com_sombra(x + 60, y + 8, nome, cor_ouro, 17.0, verdadeiro)
+		}
+		senao
+		{
+			desenhar_texto_com_sombra(x + 60, y + 8, nome, g.COR_BRANCO, 17.0, verdadeiro)
+		}
+
+		se (eh_mult)
+		{
+			se (nivel >= 1)
+			{
+				desenhar_texto_com_sombra(x + 60, y + 36, "ADQUIRIDO", cor_ok, 15.0, verdadeiro)
+			}
+			senao
+			{
+				desenhar_texto_com_sombra(x + 60, y + 36, "Dobra as estrelas coletadas", cor_texto_fraco, 13.0, falso)
+			}
+		}
+		senao
+		{
+			desenhar_pips(x + 60, y + 38, nivel, maximo)
+		}
+
+		se (nivel >= maximo)
+		{
+			desenhar_texto_com_sombra(x + 268, y + 22, "MÁX", cor_ouro, 20.0, verdadeiro)
+		}
+		senao
+		{
+			inteiro cor_custo = cor_ruim
+			se (banco >= custo)
+			{
+				cor_custo = g.COR_VERDE
+			}
+			icone_ui(x + 250, y + 34, 4)
+			desenhar_texto_com_sombra(x + 278, y + 37, "" + custo, cor_custo, 17.0, verdadeiro)
+		}
+	}
+
+	funcao desenhar_card_melhorias(inteiro x0, cadeia nome, cadeia ctrl, inteiro banco, inteiro sel, inteiro n_vida, inteiro n_comb, inteiro n_vel, logico mult)
+	{
+		desenhar_painel(x0 + 20, 96, 360, 410, 165)
+
+		icone_ui_g(x0 + 32, 106, 12)
+		desenhar_texto_com_sombra(x0 + 80, 108, nome, g.COR_BRANCO, 22.0, verdadeiro)
+		desenhar_texto_com_sombra(x0 + 80, 134, ctrl, cor_texto_fraco, 13.0, falso)
+
+		desenhar_painel(x0 + 262, 110, 108, 30, 170)
+		icone_ui(x0 + 268, 113, 4)
+		desenhar_texto_com_sombra(x0 + 298, 117, "" + banco, g.COR_AMARELO, 16.0, verdadeiro)
+
+		inteiro nm = 0
+		se (mult)
+		{
+			nm = 1
+		}
+		desenhar_linha_melhoria(x0 + 37, 168, "Vida extra", 5, n_vida, 5, n_vida * 3, banco, sel == 0, falso)
+		desenhar_linha_melhoria(x0 + 37, 246, "Tanque maior", 6, n_comb, 5, n_comb * 3, banco, sel == 1, falso)
+		desenhar_linha_melhoria(x0 + 37, 324, "Velocidade máxima", 7, n_vel, 5, n_vel * 3, banco, sel == 2, falso)
+		desenhar_linha_melhoria(x0 + 37, 402, "2x estrelas", 8, nm, 1, 15, banco, sel == 3, verdadeiro)
+	}
+
+	funcao desenhar_melhorias()
+	{
+		desenhar_fundo_ui()
+		desenhar_divisoria()
+
+		g.definir_tamanho_texto(34.0)
+		inteiro lt = g.largura_texto("MELHORIAS")
+		icone_ui_g(400 - lt / 2 - 52, 34, 7)
+		icone_ui_g(400 + lt / 2 + 14, 34, 7)
+		texto_em(400, 36, "MELHORIAS", g.COR_AMARELO, 34.0, verdadeiro)
+
+		desenhar_card_melhorias(0, "Jogador 1", "W/S escolher  |  D comprar", banco_estrelas_p1, opcao_melhoria_p1, nivel_vida_p1, nivel_combustivel_p1, nivel_velocidade_p1, mult_estrelas_p1)
+		desenhar_card_melhorias(400, "Jogador 2", "Cima/Baixo escolher  |  Dir comprar", banco_estrelas_p2, opcao_melhoria_p2, nivel_vida_p2, nivel_combustivel_p2, nivel_velocidade_p2, mult_estrelas_p2)
+
+		desenhar_painel(290, 534, 220, 30, 170)
+		texto_em(400, 540, "ENTER para voltar", g.COR_VERDE, 17.0, falso)
+	}
+
+	funcao desenhar_card_resultado(inteiro x, cadeia nome, inteiro cor_nome, real pontos, inteiro estrelas, inteiro banco, inteiro cps, logico vencedor, logico recorde, real fator)
+	{
+		se (vencedor)
+		{
+			g.definir_cor(cor_ouro)
+			g.definir_opacidade(90)
+			g.desenhar_retangulo(x - 5, 325, 340, 160, verdadeiro, verdadeiro)
+			g.definir_opacidade(255)
+		}
+		desenhar_painel(x, 330, 330, 150, 200)
+
+		g.definir_cor(cor_nome)
+		g.desenhar_retangulo(x + 14, 340, 40, 26, verdadeiro, verdadeiro)
+		desenhar_texto_com_sombra(x + 22, 343, nome, g.COR_BRANCO, 17.0, falso)
+		se (vencedor)
+		{
+			icone_ui_g(x + 280, 336, 13)
+		}
+		se (recorde)
+		{
+			icone_ui(x + 64, 341, 14)
+			desenhar_texto_com_sombra(x + 92, 344, "NOVO RECORDE!", cor_ouro, 14.0, verdadeiro)
+		}
+
+		desenhar_texto_com_sombra(x + 18, 374, "" + tp.real_para_inteiro(pontos * fator) + " m", g.COR_AMARELO, 36.0, verdadeiro)
+
+		icone_ui(x + 18, 424, 4)
+		desenhar_texto_com_sombra(x + 48, 427, "coletadas: " + estrelas + "   |   banco: " + banco, g.COR_BRANCO, 14.0, verdadeiro)
+		se (modo_ultima_corrida == 1)
+		{
+			icone_ui(x + 18, 450, 11)
+			desenhar_texto_com_sombra(x + 48, 453, "checkpoints: " + cps, g.COR_BRANCO, 14.0, verdadeiro)
+		}
+	}
+
+	funcao desenhar_game_over()
+	{
+		inteiro ms = u.tempo_decorrido() - t_estado_ms
+
+		g.desenhar_imagem(0, 0, img_go_bg)
+
+		// fumaça subindo do carro batido
+		para (inteiro i = 0; i < 5; i++)
+		{
+			inteiro ciclo = (tempo_ui * 2 + i * 40) % 200
+			g.desenhar_imagem(650 + (i % 3) * 14 - ciclo / 8, 470 - ciclo, img_fumaca)
+		}
+
+		// título com brilho pulsante
+		inteiro pulso = (tempo_ui / 6) % 10
+		se (pulso > 5)
+		{
+			pulso = 10 - pulso
+		}
+		g.definir_opacidade(60 + pulso * 12)
+		texto_em(400 - 3, 28, "GAME OVER", g.COR_VERMELHO, 54.0, falso)
+		texto_em(400 + 3, 28, "GAME OVER", g.COR_VERMELHO, 54.0, falso)
+		texto_em(400, 25, "GAME OVER", g.COR_VERMELHO, 54.0, falso)
+		texto_em(400, 31, "GAME OVER", g.COR_VERMELHO, 54.0, falso)
+		g.definir_opacidade(255)
+		texto_em(400, 28, "GAME OVER", g.COR_BRANCO, 54.0, verdadeiro)
+
+		// vencedor
+		cadeia vencedor = "EMPATE!"
+		inteiro venc = 0
+		se (pontuacao_p1 > pontuacao_p2)
+		{
+			vencedor = "JOGADOR 1 VENCEU!"
+			venc = 1
+		}
+		senao se (pontuacao_p2 > pontuacao_p1)
+		{
+			vencedor = "JOGADOR 2 VENCEU!"
+			venc = 2
+		}
+		inteiro balanco = (tempo_ui / 8) % 6
+		se (balanco > 3)
+		{
+			balanco = 6 - balanco
+		}
+		g.desenhar_imagem(330, 94 + balanco, img_trofeu)
+		texto_em(400, 274, vencedor, cor_ouro, 28.0, verdadeiro)
+
+		// números contando para cima
+		real fator = ms / 1400.0
+		se (fator > 1.0)
+		{
+			fator = 1.0
+		}
+		desenhar_card_resultado(50, "P1", cor_azul_p1, pontuacao_p1, estrelas_p1_qtd, banco_estrelas_p1, cp_count[0], venc == 1, novo_recorde_p1, fator)
+		desenhar_card_resultado(420, "P2", cor_laranja_p2, pontuacao_p2, estrelas_p2_qtd, banco_estrelas_p2, cp_count[1], venc == 2, novo_recorde_p2, fator)
+
+		se ((tempo_ui / 30) % 2 == 0)
+		{
+			desenhar_painel(240, 520, 320, 34, 190)
+			texto_em(400, 527, "ENTER - voltar ao menu", g.COR_VERDE, 19.0, verdadeiro)
+		}
+
+		// entrada suave
+		inteiro fade = 255 - ms / 2
+		se (fade > 0)
+		{
+			g.definir_cor(g.COR_PRETO)
+			g.definir_opacidade(fade)
+			g.desenhar_retangulo(0, 0, LARGURA, ALTURA, falso, verdadeiro)
+			g.definir_opacidade(255)
+		}
+	}
+
 }
-/* $$$ Portugol Studio $$$ 
- * 
- * Esta seção do arquivo guarda informações do Portugol Studio.
- * Você pode apagá-la se estiver utilizando outro editor.
- * 
- * @POSICAO-CURSOR = 16805; 
- * @DOBRAMENTO-CODIGO = [94, 228, 234, 238, 244, 248, 341, 379, 449, 447, 443, 463, 493, 497, 485, 506, 527, 539, 545, 537, 551, 565, 581, 586, 591, 595, 573, 600, 569, 563, 611, 609, 607, 622, 626, 638, 646, 620, 676, 680, 657, 694, 690, 688, 686, 710, 702, 734, 730, 746, 724, 752, 769, 773, 779, 783, 777, 764, 762, 796, 794, 849, 814, 868, 808, 903, 874, 921, 916, 937, 935, 942, 946, 929, 927, 953, 959, 967, 1008, 1006, 1013, 1002, 1019, 1081, 1067, 1027, 1118, 1125, 1135, 1132, 1147, 1144, 1159, 1157, 1171, 1166, 1187, 1182, 1198, 1207, 1205, 1221, 1219, 1245, 1249, 1243, 1255, 1259, 1263, 1269, 1267, 1237, 1233, 1284, 1282, 1293, 1297, 1291, 1306, 1310, 1304, 1322, 1326, 1320, 1336, 1334, 1344, 1354, 1358, 1350, 1367, 1373, 1365, 1381, 1379, 1388, 1395, 1416, 1420, 1393, 1461, 1451, 1429, 1473, 1471, 1487, 1484, 1497, 1494, 1504, 1510, 1520, 1516, 1532, 1538, 1544, 1557, 1549, 1601, 1590, 1579, 1616, 1623, 1611, 1633, 1631, 1629, 1650, 1658, 1656, 1673, 1669, 1664, 1684, 1682, 1680, 1704, 1709, 1700, 1692, 1718, 1734, 1740, 1744, 1726, 1752, 1761, 1758, 1750, 1724, 1716, 1780, 1776, 1770, 1792, 1790, 1834, 1832, 1826, 1821, 1849, 1846, 1859, 1866, 1864, 1857, 1874, 1879, 1884, 1893, 1898, 1889, 1908, 1906, 1920, 1935, 1945, 1940, 1964, 1975, 1969, 1962, 1983, 1992, 1990, 2000, 1998, 2008, 2006, 2016, 2014, 1988, 2028, 2026, 2035, 2033, 2042, 2040, 2049, 2047, 2024, 2062, 2056, 2072, 2091, 2095, 2085, 2083, 2117, 2121, 2125, 2106, 2133, 2147, 2158, 2164, 2183, 2179, 2191, 2199, 2204, 2216, 2211, 2222, 2301, 2392, 2410, 2408, 2431, 2371, 2455, 2444, 2470, 2462, 2496, 2504, 2514, 2598, 2596, 2625, 2527, 2654, 2652, 2650, 2648, 2676, 2680, 2670, 2688, 2701, 2698, 2696, 2694, 2718, 2715, 2713, 2711, 2734, 2741, 2744, 2748, 2753, 2756, 2760, 2767, 2778, 2781, 2788, 2793, 2728, 2805, 2810, 2803, 2819, 2824, 2816, 2834, 2839, 2832, 2848, 2853, 2845, 2800, 2861, 2877, 2890, 2873, 2867, 2911, 2924, 2907, 2901, 2937, 2935, 2951, 2957, 2949, 2967, 2974, 2989, 2979, 2965, 3006, 3027, 3000, 3039, 3058, 3033, 2998, 3072, 3069, 3081, 3078, 3090, 3087, 3099, 3096, 3108, 3105, 3066, 3122, 3149, 3136, 3118, 3165, 3170, 3179, 3177, 3190, 3175, 3196, 3163, 3242, 3249, 3270, 3277, 3231, 3203, 3302, 3307, 3319, 3324, 3315, 3334, 3332, 3312, 3344, 3349, 3360, 3364, 3357, 3374, 3372, 3354, 3384, 3299, 3405, 3410, 3400, 3419, 3417, 3393, 3391, 3442, 3449, 3447, 3457, 3464, 3462, 3472, 3477, 3433, 3502, 3508, 3500, 3493, 3551, 3549, 3561, 3559, 3572, 3577, 3570, 3587, 3585, 3598, 3609, 3619, 3651, 3657, 3663, 3633, 3675, 3684, 3691, 3708, 3706, 3700, 3722, 3728, 3734, 3755, 3740, 3772, 3776, 3774, 3780, 3770, 3789, 3793, 3791, 3797, 3787, 3762, 3807, 3809, 3811, 3816, 3804, 3825, 3822, 3835, 3844, 3831, 3856, 3854, 3868, 3866, 3880, 3878, 3898, 3895, 3908, 3905, 3890, 3922, 3932, 3943, 3954, 3965, 3974, 3916, 3989, 3983, 4013, 4008, 4002, 4022, 4033, 4048, 4059, 4054, 4068, 4066, 4075, 4083, 4081, 4095, 4101, 4110, 4107, 4119, 4127, 4144, 4166, 4180, 4207, 4213, 4219, 4225, 4234, 4240, 4246, 4231, 4211, 4205, 4279, 4284, 4293, 4298, 4289, 4318, 4323, 4332, 4337, 4328, 4254, 4349, 4357, 4363, 4371, 4376, 4369, 4386, 4392, 4400, 4405, 4398, 4415, 4353, 4347, 4423, 4469, 4472, 4460, 4489, 4492, 4480, 4507, 4515, 4523, 4531, 4504, 4502, 4545, 4553, 4561, 4569, 4542, 4540, 4500, 4582, 4589, 4594, 4599, 4605, 4610, 4615, 4620, 4586, 4580, 4638, 4640, 4642, 4628, 4653, 4659, 4657, 4651];
- * @PONTOS-DE-PARADA = ;
- * @SIMBOLOS-INSPECIONADOS = ;
- * @FILTRO-ARVORE-TIPOS-DE-DADO = inteiro, real, logico, cadeia, caracter, vazio;
- * @FILTRO-ARVORE-TIPOS-DE-SIMBOLO = variavel, vetor, matriz, funcao;
- */
